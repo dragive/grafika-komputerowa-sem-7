@@ -12,10 +12,10 @@ from src.first.tools.RectangleTool import RectangleTool
 
 
 class Tools(enum.Enum):
-    PICK: tuple[str, AbstractTool] = ("PICK", PickTool)
-    LINE: tuple[str, AbstractTool] = ("LINE", LineTool)
-    OVAL: tuple[str, AbstractTool] = ("OVAL", OvalTool)
-    SQUARE: tuple[str, AbstractTool] = ("SQUARE", RectangleTool)
+    PICK: type(AbstractTool) = PickTool
+    LINE: type(AbstractTool) = LineTool
+    OVAL: type(AbstractTool) = OvalTool
+    SQUARE: type(AbstractTool) = RectangleTool
 
 
 class MainWindow:
@@ -35,7 +35,7 @@ class MainWindow:
         self.side_settings = tk.Frame(self.main)
         self.side_settings.grid(row=1, column=1)
 
-        self.tool: tuple[str, AbstractTool] = Tools.PICK
+        self.tool: AbstractTool = Tools.PICK.value()
 
         self.add_side_settings_contents()
         self.__set_tool_pick()
@@ -45,8 +45,8 @@ class MainWindow:
         self.main.mainloop()
 
     def __set_tool(self):
-        print(f"{self.tool.value[0]=}")
-        if self.tool == Tools.PICK:
+        print(f"{self.tool=}")
+        if isinstance(self.tool, Tools.PICK.value):
             self.disable_button(self.side_settings_text_field_button_submit)
             self.__set_impl_none()
         else:
@@ -54,13 +54,13 @@ class MainWindow:
             self.__set_impl_4_args_creating_object()
 
         for k, v in self.__get_buttons_dict.items():
-            if not self.tool == k:
+            if not isinstance(self.tool, k.value):
                 self.enable_button(v)
             else:
                 self.disable_button(v)
 
     @property
-    def __get_buttons_dict(self) -> dict[tuple[str, AbstractTool], Button]:
+    def __get_buttons_dict(self) -> dict[type(AbstractTool), Button]:
         return {
             Tools.PICK: self.side_settings_button_pick,
             Tools.LINE: self.side_settings_button_line,
@@ -69,25 +69,24 @@ class MainWindow:
         }
 
     def __set_tool_pick(self):
-        self.tool = Tools.PICK
+        self.tool = Tools.PICK.value()
         self.__set_tool()
 
     def __set_tool_oval(self):
-        self.tool = Tools.OVAL
+        self.tool = Tools.OVAL.value()
         self.__set_tool()
 
     def __set_tool_square(self):
-        self.tool = Tools.SQUARE
+        self.tool = Tools.SQUARE.value()
         self.__set_tool()
 
     def __set_tool_line(self):
-        self.tool = Tools.LINE
+        self.tool = Tools.LINE.value()
         self.__set_tool()
 
     def __submit_side_settings_text_field_params(self):
-        abstract_tool: Callable = self.tool.value[1]
+        abstract_tool: Callable = self.tool
         if abstract_tool is not None:
-            abstract_tool: AbstractTool = abstract_tool()
             values = self.side_settings_text_field_params.get().split(',')
             try:
                 values = tuple(int(i) for i in values)
@@ -99,7 +98,7 @@ class MainWindow:
 
     def ___parsing_text_area_creating_object_4_args_from_tools_impl(self, abstract_tool, values):
         if len(values) == 4:
-            abstract_tool.generate_object(self.canvas, *values,width = 2)
+            abstract_tool.generate_object(self.canvas, *values, width=2)
 
     def ___parsing_text_area_none_impl(self, abstract_tool, values):
         pass
@@ -130,7 +129,6 @@ class MainWindow:
                                                                 command=self.__submit_side_settings_text_field_params,
                                                                 text="Submit")
         self.side_settings_text_field_button_submit.pack(side=tk.LEFT)
-
 
     @staticmethod
     def enable_button(b: tk.Button):
