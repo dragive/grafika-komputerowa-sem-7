@@ -2,13 +2,14 @@ import enum
 import tkinter as tk
 from tkinter import Button
 from tkinter import messagebox
-from typing import Callable, Union
+from typing import Callable, Union, Dict, Any
 
 from src.first.tools.AbstractTool import AbstractTool
 from src.first.tools.LineTool import LineTool
 from src.first.tools.OvalTool import OvalTool
 from src.first.tools.PickTool import PickTool
 from src.first.tools.RectangleTool import RectangleTool
+from src.first.utils import Buttons
 
 
 class Tools(enum.Enum):
@@ -21,11 +22,13 @@ class Tools(enum.Enum):
 class MainWindow:
     def __init__(self):
         self.side_settings_text_field_button_submit: Union[None, tk.Button] = None
-        self.side_settings_text_field_params: Union[None, tk.Button] = None
+        self.side_settings_text_field_params: Union[None, tk.Entry] = None
         self.side_settings_button_pick: Union[None, tk.Button] = None
         self.side_settings_button_square: Union[None, tk.Button] = None
         self.side_settings_button_line: Union[None, tk.Button] = None
         self.side_settings_button_oval: Union[None, tk.Button] = None
+
+        self.__key_mappings: Dict[Buttons, set[Callable]] = {}
 
         self.main = tk.Tk()
 
@@ -41,11 +44,11 @@ class MainWindow:
         self.__set_tool_pick()
 
         self.parsing_args_def = self.___parsing_text_area_creating_object_4_args_from_tools_impl
-
+        self.initialize_binding_handler()
         self.main.mainloop()
 
     def __set_tool(self):
-        print(f"{self.tool=}")
+        log(self.tool)
         if isinstance(self.tool, Tools.PICK.value):
             self.disable_button(self.side_settings_text_field_button_submit)
             self.__set_impl_none()
@@ -58,6 +61,16 @@ class MainWindow:
                 self.enable_button(v)
             else:
                 self.disable_button(v)
+
+        self.__reset_bindings_in_canvas()
+        self.bind_buttons({
+            Buttons.LEFT_BUTTON: self.tool.fist_click_in_canvas
+        })
+
+    def __reset_bindings_in_canvas(self):
+        key_mappings: Dict[Buttons, set[Callable]] = self.__key_mappings
+        for b in Buttons:
+            key_mappings[b] = set()
 
     @property
     def __get_buttons_dict(self) -> dict[type(AbstractTool), Button]:
@@ -85,7 +98,7 @@ class MainWindow:
         self.__set_tool()
 
     def __submit_side_settings_text_field_params(self):
-        abstract_tool: Callable = self.tool
+        abstract_tool: AbstractTool = self.tool
         if abstract_tool is not None:
             values = self.side_settings_text_field_params.get().split(',')
             try:
@@ -119,7 +132,8 @@ class MainWindow:
         self.side_settings_button_oval = tk.Button(self.side_settings, text="Oval", command=self.__set_tool_oval)
         self.side_settings_button_oval.pack(side=tk.LEFT)
 
-        self.side_settings_button_square = tk.Button(self.side_settings, text="Square", command=self.__set_tool_square)
+        self.side_settings_button_square = tk.Button(self.side_settings, text="Square",
+                                                     command=self.__set_tool_square)
         self.side_settings_button_square.pack(side=tk.LEFT)
 
         self.side_settings_text_field_params = tk.Entry(self.side_settings)
@@ -129,6 +143,40 @@ class MainWindow:
                                                                 command=self.__submit_side_settings_text_field_params,
                                                                 text="Submit")
         self.side_settings_text_field_button_submit.pack(side=tk.LEFT)
+
+    def bind_buttons(self, bindings: Dict[Buttons, Callable]):
+        print(str(bindings) + "@")
+        for k, v in bindings.items():
+            if v is not None:
+                self.__manage_binding(k, v)
+            else:
+                self.__manage_binding(k, remove=True)
+
+    def __manage_binding(self, button: Buttons, exec=None, remove=False):
+        if remove:
+            self.__key_mappings[button] = set()
+            return
+        # if button in self.__key_mappings.keys():
+        self.__key_mappings[button] = set()
+        if exec is not None:
+            self.__key_mappings[button].add(exec)
+
+    def initialize_binding_handler(self):
+        def execute_in_set(button: Buttons, *args, **kwargs):
+            # print(button)
+            a = {}
+            for i in self.__key_mappings[button]:
+                x = i(self, *args, **kwargs)
+                a.update(x)
+
+            self.bind_buttons(a)
+
+        def return_handler(button: Buttons):
+            return lambda *args, **kwargs: execute_in_set(button, *args, **kwargs)
+
+        self.canvas.bind(Buttons.LEFT_BUTTON.value, return_handler(Buttons.LEFT_BUTTON), add=True)
+        self.canvas.bind(Buttons.LEFT_BUTTON_MOTION.value, return_handler(Buttons.LEFT_BUTTON_MOTION), add=True)
+        self.canvas.bind(Buttons.MOTION.value, return_handler(Buttons.MOTION), add=True)
 
     @staticmethod
     def enable_button(b: tk.Button):
@@ -146,20 +194,6 @@ class MainWindow:
 def log(*args, **kwargs):
     print(f"{args=}")
     print(f"{kwargs=}")
-
-
-def main():
-    top = tk.Tk()
-
-    C = tk.Canvas(top, bg="white", height=300, width=400)
-    button = tk.Button(top, text="123", command=lambda: print("hii"))
-    button.pack()
-    C.bind("<B1-Motion>", log)
-    C.bind("<ButtonRelease-first>", log)
-    arc = C.create_line(10, 20, 30, 40, fill="black")
-
-    C.pack()
-    top.mainloop()
 
 
 if __name__ == '__main__':
