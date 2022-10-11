@@ -17,7 +17,7 @@ def onclick(event):
 root = tk.Tk()
 cv = tk.Canvas(root, height=800, width=800)
 cv.pack()
-cv.bind('<Button-1>', onclick)
+cv.bind('<Button-first>', onclick)
 
 id_a = cv.create_line(50, 50, 60, 60, width=2)
 id_b = cv.create_rectangle(80, 80, 100, 100, tags=('rect'))
