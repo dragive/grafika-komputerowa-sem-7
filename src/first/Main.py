@@ -69,9 +69,7 @@ class MainWindow:
                 self.disable_button(v)
 
         self.__reset_bindings_in_canvas()
-        self.bind_buttons({
-            Buttons.LEFT_BUTTON: self.tool.fist_click_in_canvas
-        })
+        self.bind_buttons(self.tool.get_initial_mapping)
 
     def __reset_bindings_in_canvas(self):
         key_mappings: Dict[Buttons, set[Callable]] = self.__key_mappings
@@ -229,6 +227,7 @@ class MainWindow:
         self.canvas.bind(Buttons.LEFT_BUTTON_MOTION.value, self.return_handler(Buttons.LEFT_BUTTON_MOTION), add=True)
         self.canvas.bind(Buttons.MOTION.value, self.return_handler(Buttons.MOTION), add=True)
         self.canvas.bind(Buttons.LEFT_BUTTON_RELEASE.value, self.return_handler(Buttons.LEFT_BUTTON_RELEASE), add=True)
+        self.canvas.bind(Buttons.RIGHT_BUTTON_DOUBLE.value, self.return_handler(Buttons.RIGHT_BUTTON_DOUBLE), add=True)
 
     def ___execute_in_set(self, button: Buttons, *args, **kwargs):
         # print(button)

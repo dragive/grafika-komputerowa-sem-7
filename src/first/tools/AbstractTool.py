@@ -38,3 +38,10 @@ class AbstractTool:
     @staticmethod
     def get_tags():
         return {"tags": "selectable"}
+
+    @property
+    def get_initial_mapping(self):
+        from src.first.utils import Buttons
+        return {
+            Buttons.LEFT_BUTTON: self.fist_click_in_canvas,
+        }
