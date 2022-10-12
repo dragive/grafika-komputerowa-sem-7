@@ -2,7 +2,7 @@ import enum
 import tkinter as tk
 from tkinter import Button
 from tkinter import messagebox
-from typing import Callable, Union, Dict, Any
+from typing import Callable, Union, Dict
 
 from src.first.tools.AbstractTool import AbstractTool
 from src.first.tools.LineTool import LineTool
@@ -38,13 +38,14 @@ class MainWindow:
         self.side_settings = tk.Frame(self.main)
         self.side_settings.grid(row=1, column=1)
 
-        self.tool: AbstractTool = Tools.PICK.value()
+        self.tool: AbstractTool = Tools.PICK.value(main_window=self)
 
         self.add_side_settings_contents()
         self.__set_tool_pick()
 
         self.parsing_args_def = self.___parsing_text_area_creating_object_4_args_from_tools_impl
         self.initialize_binding_handler()
+
         self.main.mainloop()
 
     def __set_tool(self):
@@ -82,19 +83,19 @@ class MainWindow:
         }
 
     def __set_tool_pick(self):
-        self.tool = Tools.PICK.value()
+        self.tool = Tools.PICK.value(main_window = self)
         self.__set_tool()
 
     def __set_tool_oval(self):
-        self.tool = Tools.OVAL.value()
+        self.tool = Tools.OVAL.value(main_window = self)
         self.__set_tool()
 
     def __set_tool_square(self):
-        self.tool = Tools.SQUARE.value()
+        self.tool = Tools.SQUARE.value(main_window = self)
         self.__set_tool()
 
     def __set_tool_line(self):
-        self.tool = Tools.LINE.value()
+        self.tool = Tools.LINE.value(main_window = self)
         self.__set_tool()
 
     def __submit_side_settings_text_field_params(self):
@@ -145,7 +146,7 @@ class MainWindow:
         self.side_settings_text_field_button_submit.pack(side=tk.LEFT)
 
     def bind_buttons(self, bindings: Dict[Buttons, Callable]):
-        print(str(bindings) + "@")
+
         for k, v in bindings.items():
             if v is not None:
                 self.__manage_binding(k, v)
@@ -162,21 +163,23 @@ class MainWindow:
             self.__key_mappings[button].add(exec)
 
     def initialize_binding_handler(self):
-        def execute_in_set(button: Buttons, *args, **kwargs):
-            # print(button)
-            a = {}
-            for i in self.__key_mappings[button]:
-                x = i(self, *args, **kwargs)
-                a.update(x)
 
-            self.bind_buttons(a)
+        self.canvas.bind(Buttons.LEFT_BUTTON.value, self.return_handler(Buttons.LEFT_BUTTON), add=True)
+        self.canvas.bind(Buttons.LEFT_BUTTON_MOTION.value, self.return_handler(Buttons.LEFT_BUTTON_MOTION), add=True)
+        self.canvas.bind(Buttons.MOTION.value, self.return_handler(Buttons.MOTION), add=True)
+        self.canvas.bind(Buttons.LEFT_BUTTON_RELEASE.value, self.return_handler(Buttons.LEFT_BUTTON_RELEASE), add=True)
 
-        def return_handler(button: Buttons):
-            return lambda *args, **kwargs: execute_in_set(button, *args, **kwargs)
+    def ___execute_in_set(self, button: Buttons, *args, **kwargs):
+        # print(button)
+        a = {}
+        for i in self.__key_mappings[button]:
+            x = i(self, *args, **kwargs)
+            a.update(x)
 
-        self.canvas.bind(Buttons.LEFT_BUTTON.value, return_handler(Buttons.LEFT_BUTTON), add=True)
-        self.canvas.bind(Buttons.LEFT_BUTTON_MOTION.value, return_handler(Buttons.LEFT_BUTTON_MOTION), add=True)
-        self.canvas.bind(Buttons.MOTION.value, return_handler(Buttons.MOTION), add=True)
+        self.bind_buttons(a)
+
+    def return_handler(self, button: Buttons):
+        return lambda *args, **kwargs: self.___execute_in_set(button, *args, **kwargs)
 
     @staticmethod
     def enable_button(b: tk.Button):

@@ -25,3 +25,5 @@ class Buttons(enum.Enum):
     LEFT_BUTTON_DOUBLE = '<Double-Button-1>'
     MIDDLE_BUTTON_DOUBLE = '<Double-Button-2>'
     RIGHT_BUTTON_DOUBLE = '<Double-Button-3>'
+    LEFT_BUTTON_RELEASE = '<ButtonRelease-1>'
+    OBJECT_CLICKED = None
