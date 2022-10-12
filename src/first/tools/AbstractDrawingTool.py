@@ -22,7 +22,8 @@ class AbstractDrawingTool(AbstractTool):
 
         self._initial_cords = args[0].x, args[0].y
 
-        self._drawn_object = self.generate_object(main_window.canvas, *self._initial_cords, *self._initial_cords)
+        self._drawn_object = self.generate_object(main_window.canvas, *self._initial_cords, *self._initial_cords,
+                                                  **kwargs)
 
         return super().fist_click_in_canvas(*args, **kwargs)
 
@@ -30,7 +31,7 @@ class AbstractDrawingTool(AbstractTool):
         if self._drawn_object is not None:
             main_window.canvas.delete(self._drawn_object)
 
-        self._drawn_object = self.generate_object(main_window.canvas, *self._initial_cords, args[0].x, args[0].y)
+        self._drawn_object = self.generate_object(main_window.canvas, *self._initial_cords, args[0].x, args[0].y,**kwargs)
 
         return super().after_first_click_motion(*args, **kwargs)
 

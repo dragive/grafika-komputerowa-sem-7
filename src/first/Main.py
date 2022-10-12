@@ -1,10 +1,13 @@
 import enum
 import tkinter as tk
+from json import dumps, loads
 from tkinter import Button
+from tkinter import filedialog
 from tkinter import messagebox
 from typing import Callable, Union, Dict
 
 from src.first.tools.AbstractTool import AbstractTool
+from src.first.tools.DeleteTool import DeleteTool
 from src.first.tools.LineTool import LineTool
 from src.first.tools.OvalTool import OvalTool
 from src.first.tools.PickTool import PickTool
@@ -13,6 +16,7 @@ from src.first.utils import Buttons
 
 
 class Tools(enum.Enum):
+    DELETE: type(AbstractTool) = DeleteTool
     PICK: type(AbstractTool) = PickTool
     LINE: type(AbstractTool) = LineTool
     OVAL: type(AbstractTool) = OvalTool
@@ -21,6 +25,7 @@ class Tools(enum.Enum):
 
 class MainWindow:
     def __init__(self):
+        self.side_settings_dump_data: Union[None, tk.Button] = None
         self.side_settings_text_field_button_submit: Union[None, tk.Button] = None
         self.side_settings_text_field_params: Union[None, tk.Entry] = None
         self.side_settings_button_pick: Union[None, tk.Button] = None
@@ -32,7 +37,7 @@ class MainWindow:
 
         self.main = tk.Tk()
 
-        self.canvas = tk.Canvas(self.main, bg="white", height=300, width=400)
+        self.canvas = tk.Canvas(self.main, bg="white", height=600, width=800)
         self.canvas.grid(row=2, column=1)
 
         self.side_settings = tk.Frame(self.main)
@@ -80,22 +85,27 @@ class MainWindow:
             Tools.LINE: self.side_settings_button_line,
             Tools.OVAL: self.side_settings_button_oval,
             Tools.SQUARE: self.side_settings_button_square,
+            Tools.DELETE: self.side_settings_button_delete,
         }
 
     def __set_tool_pick(self):
-        self.tool = Tools.PICK.value(main_window = self)
+        self.tool = Tools.PICK.value(main_window=self)
+        self.__set_tool()
+
+    def __set_tool_delete(self):
+        self.tool = Tools.DELETE.value(main_window=self)
         self.__set_tool()
 
     def __set_tool_oval(self):
-        self.tool = Tools.OVAL.value(main_window = self)
+        self.tool = Tools.OVAL.value(main_window=self)
         self.__set_tool()
 
     def __set_tool_square(self):
-        self.tool = Tools.SQUARE.value(main_window = self)
+        self.tool = Tools.SQUARE.value(main_window=self)
         self.__set_tool()
 
     def __set_tool_line(self):
-        self.tool = Tools.LINE.value(main_window = self)
+        self.tool = Tools.LINE.value(main_window=self)
         self.__set_tool()
 
     def __submit_side_settings_text_field_params(self):
@@ -127,6 +137,9 @@ class MainWindow:
         self.side_settings_button_pick = tk.Button(self.side_settings, text="Pick", command=self.__set_tool_pick)
         self.side_settings_button_pick.pack(side=tk.LEFT)
 
+        self.side_settings_button_delete = tk.Button(self.side_settings, text="Delete", command=self.__set_tool_delete)
+        self.side_settings_button_delete.pack(side=tk.LEFT)
+
         self.side_settings_button_line = tk.Button(self.side_settings, text="Line", command=self.__set_tool_line)
         self.side_settings_button_line.pack(side=tk.LEFT)
 
@@ -144,6 +157,54 @@ class MainWindow:
                                                                 command=self.__submit_side_settings_text_field_params,
                                                                 text="Submit")
         self.side_settings_text_field_button_submit.pack(side=tk.LEFT)
+
+        self.side_settings_dump_data = tk.Button(self.side_settings,
+                                                 command=self.dump_data,
+                                                 text="Dump")
+        self.side_settings_dump_data.pack(side=tk.LEFT)
+
+        self.side_settings_clear_canvas = tk.Button(self.side_settings,
+                                                    command=self.clear_canvas,
+                                                    text="Clear Canvas")
+        self.side_settings_clear_canvas.pack(side=tk.LEFT)
+
+        self.side_settings_read_state_from_file = tk.Button(self.side_settings,
+                                                            command=self.read_state_from_file,
+                                                            text="Read from file")
+        self.side_settings_read_state_from_file.pack(side=tk.LEFT)
+
+    def read_state_from_file(self):
+        dialog = filedialog.askopenfile(mode='r', defaultextension=".json",
+                                        filetypes=(("json file extention", "*.json"), ("All Files", "*.*")))
+
+        data = None
+        if dialog is not None:
+
+            try:
+                data = loads(dialog.read())
+            finally:
+                dialog.close()
+
+        if data is not None:
+            try:
+                print(data)
+                for i in data['data'].items():
+                    if i[1]['type'] == 'rectangle':
+                        self.canvas.create_rectangle(*i[1]['coords'], width=2)
+                    if i[1]['type'] == 'oval':
+                        self.canvas.create_oval(*i[1]['coords'], width=2)
+                    if i[1]['type'] == 'line':
+                        self.canvas.create_line(*i[1]['coords'], width=2)
+                    print(i)
+            except Exception:
+                messagebox.showerror("Error while parsing a file!")
+
+        else:
+            messagebox.showinfo("File Not Found!", "File was not found")
+
+    def clear_canvas(self):
+        for i in self.canvas.find_all():
+            self.canvas.delete(i)
 
     def bind_buttons(self, bindings: Dict[Buttons, Callable]):
 
@@ -173,7 +234,7 @@ class MainWindow:
         # print(button)
         a = {}
         for i in self.__key_mappings[button]:
-            x = i(self, *args, **kwargs)
+            x = i(self, *args, **kwargs, width = 2)
             a.update(x)
 
         self.bind_buttons(a)
@@ -192,6 +253,22 @@ class MainWindow:
     @staticmethod
     def active_button(b: tk.Button):
         b['state'] = 'active'
+
+    def dump_data(self):
+        dialog = filedialog.asksaveasfile(confirmoverwrite=True, mode='w', defaultextension=".json",
+                                          filetypes=(("json file extention", "*.json"), ("All Files", "*.*")))
+        if dialog is not None:
+            data = {
+                "data": {
+                    identifier: {
+                        "coords": self.canvas.coords(identifier),
+                        "type": self.canvas.type(identifier)
+                    } for identifier in self.canvas.find_all()}
+            }
+            try:
+                dialog.write(dumps(data))
+            finally:
+                dialog.close()
 
 
 def log(*args, **kwargs):
