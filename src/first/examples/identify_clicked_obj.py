@@ -11,8 +11,8 @@ obj2Id = canv.create_text(50, 70, text='Click', tags='obj2Tag')
 
 canv.tag_bind(obj1Id, '<ButtonPress-first>', onObjectClick)
 canv.tag_bind('obj2Tag', '<ButtonPress-first>', onObjectClick)
-print('obj1Id: ', obj1Id)
-print('obj2Id: ', obj2Id)
+# print('obj1Id: ', obj1Id)
+# print('obj2Id: ', obj2Id)
 canv.pack()
 root.mainloop()
 

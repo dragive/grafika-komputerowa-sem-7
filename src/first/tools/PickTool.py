@@ -29,7 +29,7 @@ class PickTool(AbstractTool):
         if len(ids) >= 1:
             self._moved_object = ids[0]
             self._first_click_cords = cords
-            print(self._moved_object)
+            # print(self._moved_object)
 
         d = super().fist_click_in_canvas(*args, **kwargs)
         # from src.first.utils import Buttons

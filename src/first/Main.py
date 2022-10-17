@@ -54,7 +54,7 @@ class MainWindow:
         self.main.mainloop()
 
     def __set_tool(self):
-        log(self.tool)
+        # log(self.tool)
         if isinstance(self.tool, Tools.PICK.value):
             self.disable_button(self.side_settings_text_field_button_submit)
             self.__set_impl_none()
@@ -173,7 +173,7 @@ class MainWindow:
 
     def read_state_from_file(self):
         dialog = filedialog.askopenfile(mode='r', defaultextension=".json",
-                                        filetypes=(("json file extention", "*.json"), ("All Files", "*.*")))
+                                        filetypes=(("json file extension", "*.json"), ("All Files", "*.*")))
 
         data = None
         if dialog is not None:
@@ -185,7 +185,7 @@ class MainWindow:
 
         if data is not None:
             try:
-                print(data)
+                # print(data)
                 for i in data['data'].items():
                     if i[1]['type'] == 'rectangle':
                         self.canvas.create_rectangle(*i[1]['coords'], width=2)
@@ -193,7 +193,7 @@ class MainWindow:
                         self.canvas.create_oval(*i[1]['coords'], width=2)
                     if i[1]['type'] == 'line':
                         self.canvas.create_line(*i[1]['coords'], width=2)
-                    print(i)
+                    # print(i)
             except Exception:
                 messagebox.showerror("Error while parsing a file!")
 
