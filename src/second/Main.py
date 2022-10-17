@@ -10,7 +10,7 @@ class MainWindow(tk.Tk):
         self._buttons_array: tk.Frame | None = None
         self.canvas: tk.Canvas | None = None
         self.canvas_drawn_image = None
-        self.canvas_drawn_image_obj = None
+        self.canvas_drawn_image_obj: tk.PhotoImage | None = None
 
         self.WIDTH = 640
         self.HEIGHT = 480
@@ -18,7 +18,7 @@ class MainWindow(tk.Tk):
     def initialize_view(self) -> "MainWindow":
         self._buttons_array = tk.Frame(master=self)
         self._buttons_array.pack()
-        self.canvas = tk.Canvas(self,height=self.HEIGHT, width=self.WIDTH)
+        self.canvas = tk.Canvas(self, height=self.HEIGHT, width=self.WIDTH)
         self.canvas.pack()
         self._initialize_array_button()
         return self
@@ -43,14 +43,14 @@ class MainWindow(tk.Tk):
         ))
 
         if file is not None:
-            self.parse_image(file)
+            self.parse_image_ppm(file)
         else:
             messagebox.showinfo("Nie wybrano pliku")
 
     def __command_write_to_file(self):
         pass
 
-    def parse_image(self, filename: str):
+    def parse_image_ppm(self, filename: str):
         PPM().read_from_file(filename, self)
 
     @staticmethod
