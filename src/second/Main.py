@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox
 
 import PIL.ImageTk
 from PIL import ImageTk
+from PIL.Image import Image, CUBIC, ANTIALIAS, NEAREST
 
 from src.second.formats.JPEGParser import JPEGParser
 from src.second.formats.ppm import PPM
@@ -26,6 +27,13 @@ class MainWindow(tk.Tk):
         self.WIDTH = 640
         self.HEIGHT = 480
 
+    def clear_view(self):
+        self.canvas.delete('all')
+
+        self.image_from_pixels: PIL.Image.Image | None = None
+        self.image_tk_from_raw: PIL.PhotoImage | None = None
+        self.canvas_drawn_image_id: int | None = None
+
     def initialize_view(self) -> "MainWindow":
         self._buttons_array = tk.Frame(master=self)
         self._buttons_array.pack()
@@ -40,7 +48,7 @@ class MainWindow(tk.Tk):
 
     def zoomer(self, event):
         if event.delta > 0:
-            if self.zoomcycle < 4:
+            if self.zoomcycle < 5:
                 self.zoomcycle += 1
         elif event.delta < 0:
             if self.zoomcycle > 0:
@@ -75,21 +83,24 @@ class MainWindow(tk.Tk):
                 tmp = self.image_from_pixels.crop((x - 15, y - 10, x + 15, y + 10))
             elif self.zoomcycle == 4:
                 tmp = self.image_from_pixels.crop((x - 6, y - 4, x + 6, y + 4))
+            elif self.zoomcycle == 5:
+                tmp = self.image_from_pixels.crop((x - 3, y - 2, x + 3, y + 2))
             elif self.zoomcycle == 0:
                 tmp = self.image_from_pixels
             size = (self.WIDTH, self.HEIGHT)
             if self.zoomcycle != 0:
-                img_to_be_drawn = tmp.resize(size)
+                img_to_be_drawn = tmp.resize(size,resample=NEAREST)
+
                 self.image_tk_from_raw = ImageTk.PhotoImage(img_to_be_drawn)
                 self.canvas_drawn_image_id = self.canvas.create_image(event.x, event.y, image=self.image_tk_from_raw)
             else:
                 img_to_be_drawn = tmp
                 self.image_tk_from_raw = ImageTk.PhotoImage(img_to_be_drawn)
-                self.canvas_drawn_image_id = self.canvas.create_image((self.image_from_pixels.width + 5) // 2,
-                                                                      (self.image_from_pixels.height + 5) // 2,
+                self.canvas_drawn_image_id = self.canvas.create_image((self.image_from_pixels.width +5) // 2,
+                                                                      (self.image_from_pixels.height+5) // 2,
                                                                       image=self.image_tk_from_raw)
 
-            self.update_label(event,img_to_be_drawn)
+            self.update_label(event,self.image_from_pixels)
 
     def _initialize_array_button(self):
         self._buttons_array_read_file_button_ppm = tk.Button(master=self._buttons_array,
