@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
+from src.second.formats.JPEGParser import JPEGParser
 from src.second.formats.ppm import PPM
 
 
@@ -24,21 +25,24 @@ class MainWindow(tk.Tk):
         return self
 
     def _initialize_array_button(self):
-        self._buttons_array_read_file_button = tk.Button(master=self._buttons_array,
-                                                         text="Read from file",
-                                                         command=self.__command_read_from_file)
-        self._buttons_array_read_file_button.pack(side=tk.LEFT)
+        self._buttons_array_read_file_button_ppm = tk.Button(master=self._buttons_array,
+                                                             text="Read from file PPM",
+                                                             command=self.__command_read_from_file_ppm)
+        self._buttons_array_read_file_button_ppm.pack(side=tk.LEFT)
+
+        self._buttons_array_read_file_button_jpeg = tk.Button(master=self._buttons_array,
+                                                              text="Read from file JPEG",
+                                                              command=self.__command_read_from_file_jpg)
+        self._buttons_array_read_file_button_jpeg.pack(side=tk.LEFT)
 
         self._buttons_array_write_file_button = tk.Button(master=self._buttons_array,
                                                           text="Write to file",
                                                           command=self.__command_write_to_file)
         self._buttons_array_write_file_button.pack(side=tk.LEFT)
 
-    def __command_read_from_file(self):
+    def __command_read_from_file_ppm(self):
         file = filedialog.askopenfilename(filetypes=(
             ("PPM", "*.ppm"),
-            ("JPG", "*.jpg"),
-            ("JPEG", "*.jpeg"),
             ("All Files", "*.*"),
         ))
 
@@ -47,11 +51,26 @@ class MainWindow(tk.Tk):
         else:
             messagebox.showinfo("Nie wybrano pliku")
 
+    def __command_read_from_file_jpg(self):
+        file = filedialog.askopenfilename(filetypes=(
+            ("JPG", "*.jpg"),
+            ("JPEG", "*.jpeg"),
+            ("All Files", "*.*"),
+        ))
+
+        if file is not None:
+            self.parse_image_jpg(file)
+        else:
+            messagebox.showinfo("Nie wybrano pliku")
+
     def __command_write_to_file(self):
         pass
 
     def parse_image_ppm(self, filename: str):
         PPM().read_from_file(filename, self)
+
+    def parse_image_jpg(self, filename: str):
+        JPEGParser().read_from_file(filename, self)
 
     @staticmethod
     def run():

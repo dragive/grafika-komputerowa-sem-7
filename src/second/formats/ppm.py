@@ -142,6 +142,7 @@ class PPM(AbstractFormat):
     def __read_params(file: list[str] | list[bytes]) -> list[list[str]] | list[list[bytes]]:
         last = 0
         ret = []
+
         for i, v in enumerate(file):
             last = i
             l: str | bytes
