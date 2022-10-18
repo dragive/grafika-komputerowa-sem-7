@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, HORIZONTAL
 
 import PIL.ImageTk
 from PIL import ImageTk
@@ -55,9 +55,9 @@ class MainWindow(tk.Tk):
                 self.zoomcycle -= 1
         self.crop(event)
 
-    def update_label(self,event, image_to_be_drawn):
+    def update_label(self, event, image_to_be_drawn):
         # self.image_tk_from_raw.
-        x,y = cords= event.x, event.y
+        x, y = cords = event.x, event.y
         try:
             if image_to_be_drawn:
                 self._buttons_array_label_pixel_value_text_variable.set(
@@ -89,18 +89,18 @@ class MainWindow(tk.Tk):
                 tmp = self.image_from_pixels
             size = (self.WIDTH, self.HEIGHT)
             if self.zoomcycle != 0:
-                img_to_be_drawn = tmp.resize(size,resample=NEAREST)
+                img_to_be_drawn = tmp.resize(size, resample=NEAREST)
 
                 self.image_tk_from_raw = ImageTk.PhotoImage(img_to_be_drawn)
                 self.canvas_drawn_image_id = self.canvas.create_image(event.x, event.y, image=self.image_tk_from_raw)
             else:
                 img_to_be_drawn = tmp
                 self.image_tk_from_raw = ImageTk.PhotoImage(img_to_be_drawn)
-                self.canvas_drawn_image_id = self.canvas.create_image((self.image_from_pixels.width +5) // 2,
-                                                                      (self.image_from_pixels.height+5) // 2,
+                self.canvas_drawn_image_id = self.canvas.create_image((self.image_from_pixels.width + 5) // 2,
+                                                                      (self.image_from_pixels.height + 5) // 2,
                                                                       image=self.image_tk_from_raw)
 
-            self.update_label(event,self.image_from_pixels)
+            self.update_label(event, self.image_from_pixels)
 
     def _initialize_array_button(self):
         self._buttons_array_read_file_button_ppm = tk.Button(master=self._buttons_array,
@@ -147,7 +147,36 @@ class MainWindow(tk.Tk):
             messagebox.showinfo("Nie wybrano pliku")
 
     def __command_write_to_file(self):
-        pass
+        new_window = tk.Toplevel(self)
+        new_window.title(
+            "Save file"
+        )
+        new_window.label_about_compression = tk.Label(new_window, text="Set compression params:")
+        new_window.label_about_compression.pack()
+
+        new_window.scale_compression = tk.Scale(new_window, from_= 0, to=100, orient=HORIZONTAL)
+        new_window.scale_compression.set(95)
+        new_window.scale_compression.pack()
+
+        new_window.label_about_subsampling = tk.Label(new_window, text="Set subsampling params:")
+        new_window.label_about_subsampling.pack()
+
+        new_window.scale_subsampling = tk.Scale(new_window, from_= 0, to=100, orient=HORIZONTAL)
+        new_window.scale_subsampling.pack()
+        new_window.scale_subsampling.set(0)
+        def submit_handler(*args,**kwargs):
+            sub = new_window.scale_subsampling.get()
+            com = new_window.scale_compression.get()
+
+            filename = filedialog.asksaveasfilename(filetypes=(( 'JPEG','*.jpg',),))
+            if filename and self.image_from_pixels:
+                if filename[-4:] != '.jpg' and filename[-5:] != '.jpeg':
+                    filename = filename+'.jpg'
+                self.image_from_pixels.save(filename, quality=com, subsampling=sub)
+
+        new_window.button_submit = tk.Button(new_window, text='Submit', command= lambda *args,**kwargs: submit_handler(*args,**kwargs) )
+        new_window.button_submit.pack()
+
 
     def parse_image_ppm(self, filename: str):
         PPM().read_from_file(filename, self)

@@ -97,6 +97,13 @@ class PPM(AbstractFormat):
                 ((width + 5) // 2, (5 + height) // 2),
                 image=main_window.image_tk_from_raw,
                 state='normal')
+
+            if main_window.WIDTH < width:
+                main_window.WIDTH = width
+                main_window.canvas.config(width=width)
+            if main_window.HEIGHT < height:
+                main_window.HEIGHT = height
+                main_window.canvas.config(height=height)
             print('end')
 
     @staticmethod
