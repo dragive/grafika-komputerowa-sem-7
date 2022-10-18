@@ -1,5 +1,6 @@
 from abc import ABC
-from tkinter import PhotoImage
+
+from PIL import Image, ImageTk
 
 from src.second.formats.AbstractFormat import AbstractFormat, Pixel
 
@@ -54,17 +55,17 @@ class PPM(AbstractFormat):
                pixels: list[Pixel],
                data_width: int,
                data_height: int):
+        pix = main_window.image_from_pixels.load()
         for x in range(data_width):
             for y in range(data_height):
-                main_window.canvas_drawn_image_obj.put(pixels[y * data_width + x].to_RGB, (x, y))
+                pix[x, y] = pixels[y * data_width + x].to_tuple
 
     @staticmethod
     def read_from_file(name: str, main_window: 'MainWindow', *args, **kwargs):
-        pixels = []
         t: str
         height: int | None = None
         width: int | None = None
-        pixels: list[Pixel]
+        pixels: list[Pixel] = []
         with open(name, 'rb') as file:
             read_lines = file.readline()
             if read_lines[:2] == b'P3':
@@ -81,26 +82,20 @@ class PPM(AbstractFormat):
         if t in ('P3', 'P6'):
             WIDTH = main_window.WIDTH
             HEIGHT = main_window.HEIGHT
-            main_window.canvas_drawn_image_obj = PhotoImage(width=width, height=height)
-            _scale = min(HEIGHT / height, WIDTH / width)
-            if _scale < 1:
-                main_window.WIDTH = int(main_window.WIDTH / _scale + 2)
-                main_window.HEIGHT = int(main_window.HEIGHT / _scale + 2)
+            main_window.image_from_pixels = Image.new("RGB", (width, height), (255, 255, 255))
 
-                main_window.canvas.config(width=main_window.WIDTH, height=main_window.HEIGHT, )
-            _scale = max(1, _scale)
+            _scale = min(HEIGHT / height, WIDTH / width)
+            _scale = int(max(1, _scale))
 
             PPM.__draw(main_window,
-                       # (WIDTH, HEIGHT),
                        pixels,
                        width,
                        height)
-            print('draw')
-            main_window.canvas_drawn_image_obj = main_window.canvas_drawn_image_obj.zoom(_scale)  # todo fixme
-            print('zoom')
-            main_window.canvas_drawn_image = main_window.canvas.create_image(
-                ((width * _scale + 1) // 2, (1 + height * _scale) // 2),
-                image=main_window.canvas_drawn_image_obj,
+            main_window.image_tk_from_raw = ImageTk.PhotoImage(main_window.image_from_pixels)
+
+            main_window.canvas_drawn_image_id = main_window.canvas.create_image(
+                ((width + 5) // 2, (5 + height) // 2),
+                image=main_window.image_tk_from_raw,
                 state='normal')
             print('end')
 
