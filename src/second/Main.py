@@ -3,10 +3,9 @@ from tkinter import filedialog, messagebox, HORIZONTAL
 
 import PIL.ImageTk
 from PIL import ImageTk
-from PIL.Image import Image, CUBIC, ANTIALIAS, NEAREST
+from PIL.Image import Image, NEAREST
 
 from src.second.formats.JPEGParser import JPEGParser
-from src.second.formats.ppm import PPM
 
 
 class MainWindow(tk.Tk):
@@ -48,7 +47,7 @@ class MainWindow(tk.Tk):
 
     def zoomer(self, event):
         if event.delta > 0:
-            if self.zoomcycle < 5:
+            if self.zoomcycle < 6:
                 self.zoomcycle += 1
         elif event.delta < 0:
             if self.zoomcycle > 0:
@@ -76,14 +75,16 @@ class MainWindow(tk.Tk):
             tmp = None
             x, y = event.x, event.y
             if self.zoomcycle == 1:
-                tmp = self.image_from_pixels.crop((x - 45, y - 30, x + 45, y + 30))
+                tmp = self.image_from_pixels.crop((x - 75, y - 65, x + 75, y + 65))
             elif self.zoomcycle == 2:
-                tmp = self.image_from_pixels.crop((x - 30, y - 20, x + 30, y + 20))
+                tmp = self.image_from_pixels.crop((x - 45, y - 30, x + 45, y + 30))
             elif self.zoomcycle == 3:
-                tmp = self.image_from_pixels.crop((x - 15, y - 10, x + 15, y + 10))
+                tmp = self.image_from_pixels.crop((x - 30, y - 20, x + 30, y + 20))
             elif self.zoomcycle == 4:
-                tmp = self.image_from_pixels.crop((x - 6, y - 4, x + 6, y + 4))
+                tmp = self.image_from_pixels.crop((x - 15, y - 10, x + 15, y + 10))
             elif self.zoomcycle == 5:
+                tmp = self.image_from_pixels.crop((x - 6, y - 4, x + 6, y + 4))
+            elif self.zoomcycle == 6:
                 tmp = self.image_from_pixels.crop((x - 3, y - 2, x + 3, y + 2))
             elif self.zoomcycle == 0:
                 tmp = self.image_from_pixels
@@ -96,8 +97,8 @@ class MainWindow(tk.Tk):
             else:
                 img_to_be_drawn = tmp
                 self.image_tk_from_raw = ImageTk.PhotoImage(img_to_be_drawn)
-                self.canvas_drawn_image_id = self.canvas.create_image((self.image_from_pixels.width + 5) // 2,
-                                                                      (self.image_from_pixels.height + 5) // 2,
+                self.canvas_drawn_image_id = self.canvas.create_image((self.image_from_pixels.width + 7) // 2,
+                                                                      (self.image_from_pixels.height + 7) // 2,
                                                                       image=self.image_tk_from_raw)
 
             self.update_label(event, self.image_from_pixels)
@@ -142,7 +143,10 @@ class MainWindow(tk.Tk):
         ))
 
         if file is not None:
-            self.parse_image_jpg(file)
+            try:
+                self.parse_image_jpg(file)
+            except Exception:
+                messagebox.showerror("Niepoprawy format pliku")
         else:
             messagebox.showinfo("Nie wybrano pliku")
 
@@ -154,32 +158,33 @@ class MainWindow(tk.Tk):
         new_window.label_about_compression = tk.Label(new_window, text="Set compression params:")
         new_window.label_about_compression.pack()
 
-        new_window.scale_compression = tk.Scale(new_window, from_= 0, to=100, orient=HORIZONTAL)
+        new_window.scale_compression = tk.Scale(new_window, from_=0, to=100, orient=HORIZONTAL)
         new_window.scale_compression.set(95)
         new_window.scale_compression.pack()
 
         new_window.label_about_subsampling = tk.Label(new_window, text="Set subsampling params:")
         new_window.label_about_subsampling.pack()
 
-        new_window.scale_subsampling = tk.Scale(new_window, from_= 0, to=100, orient=HORIZONTAL)
+        new_window.scale_subsampling = tk.Scale(new_window, from_=0, to=100, orient=HORIZONTAL)
         new_window.scale_subsampling.pack()
         new_window.scale_subsampling.set(0)
-        def submit_handler(*args,**kwargs):
+
+        def submit_handler(*args, **kwargs):
             sub = new_window.scale_subsampling.get()
             com = new_window.scale_compression.get()
 
-            filename = filedialog.asksaveasfilename(filetypes=(( 'JPEG','*.jpg',),))
+            filename = filedialog.asksaveasfilename(filetypes=(('JPEG', '*.jpg',),))
             if filename and self.image_from_pixels:
                 if filename[-4:] != '.jpg' and filename[-5:] != '.jpeg':
-                    filename = filename+'.jpg'
+                    filename = filename + '.jpg'
                 self.image_from_pixels.save(filename, quality=com, subsampling=sub)
 
-        new_window.button_submit = tk.Button(new_window, text='Submit', command= lambda *args,**kwargs: submit_handler(*args,**kwargs) )
+        new_window.button_submit = tk.Button(new_window, text='Submit',
+                                             command=lambda *args, **kwargs: submit_handler(*args, **kwargs))
         new_window.button_submit.pack()
 
-
     def parse_image_ppm(self, filename: str):
-        PPM().read_from_file(filename, self)
+        JPEGParser().read_from_file(filename, self)
 
     def parse_image_jpg(self, filename: str):
         JPEGParser().read_from_file(filename, self)
