@@ -6,6 +6,7 @@ from PIL import ImageTk
 from PIL.Image import Image, NEAREST
 
 from src.second.formats.JPEGParser import JPEGParser
+from src.second.formats.ppm import PPM
 
 
 class MainWindow(tk.Tk):
@@ -119,11 +120,23 @@ class MainWindow(tk.Tk):
                                                           command=self.__command_write_to_file)
         self._buttons_array_write_file_button.pack(side=tk.LEFT)
 
+        self._buttons_array_scale_button = tk.Button(master=self._buttons_array,
+                                                          text="Scale",
+                                                          command=self.__scale)
+        self._buttons_array_scale_button.pack(side=tk.LEFT)
+
         self._buttons_array_label_pixel_value_text_variable = tk.StringVar()
         self._buttons_array_label_pixel_value = tk.Label(self._buttons_array,
                                                          textvariable=self._buttons_array_label_pixel_value_text_variable)
         self._buttons_array_label_pixel_value.pack(side=tk.LEFT)
 
+    def __scale(self):
+        if self.image_from_pixels is not None:
+            self.image_from_pixels = self.image_from_pixels.resize((self.WIDTH, int(self.image_from_pixels.height*self.WIDTH/self.image_from_pixels.width)), resample=NEAREST)
+            self.image_tk_from_raw = ImageTk.PhotoImage(self.image_from_pixels)
+            self.canvas_drawn_image_id = self.canvas.create_image((self.image_from_pixels.width + 7) // 2,
+                                                                  (self.image_from_pixels.height + 7) // 2,
+                                                                  image=self.image_tk_from_raw)
     def __command_read_from_file_ppm(self):
         file = filedialog.askopenfilename(filetypes=(
             ("PPM", "*.ppm"),
@@ -184,7 +197,7 @@ class MainWindow(tk.Tk):
         new_window.button_submit.pack()
 
     def parse_image_ppm(self, filename: str):
-        JPEGParser().read_from_file(filename, self)
+        PPM().read_from_file(filename, self)
 
     def parse_image_jpg(self, filename: str):
         JPEGParser().read_from_file(filename, self)
