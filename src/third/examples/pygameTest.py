@@ -1,8 +1,10 @@
-import pygame as pg
-from OpenGL.GL import *
 import numpy as np
-from OpenGL.GL.shaders import compileShader, compileProgram
+import pygame
+import pygame as pg
 import pyrr
+from OpenGL.GL import *
+from OpenGL.GL.shaders import compileShader, compileProgram
+from pygame.constants import *
 
 
 class App:
@@ -19,7 +21,7 @@ class App:
         self.cube_mesh = CubeMesh()
         self.cube = Cube(
             position=[0, 0, -3],
-            eulers=[45, 0, 0]
+            eulers=[10, 10, 10]
         )
 
         projection_transform = pyrr.matrix44.create_perspective_projection(
@@ -52,9 +54,36 @@ class App:
                 if event.type == pg.QUIT:
                     running = False
 
-            self.cube.eulers[2] += 0.2
-            if self.cube.eulers[2] > 360:
-                self.cube.eulers[2] -= 360
+            if pygame.key.get_pressed()[K_w]:
+                self.cube.eulers[0] += 0.6
+                if self.cube.eulers[0] > 360:
+                    self.cube.eulers[0] -= 360
+            elif pygame.key.get_pressed()[K_s]:
+                self.cube.eulers[0] -= 0.6
+                if self.cube.eulers[0] < 0:
+                    self.cube.eulers[0] += 360
+
+            if pygame.key.get_pressed()[K_a]:
+                self.cube.eulers[1] += 0.6
+                if self.cube.eulers[1] > 360:
+                    self.cube.eulers[1] -= 360
+            elif pygame.key.get_pressed()[K_d]:
+                self.cube.eulers[1] -= 0.6
+                if self.cube.eulers[1] < 0:
+                    self.cube.eulers[1] += 360
+
+            if pygame.key.get_pressed()[K_q]:
+                self.cube.eulers[2] += 0.6
+                if self.cube.eulers[2] > 360:
+                    self.cube.eulers[2] -= 360
+            elif pygame.key.get_pressed()[K_e]:
+                self.cube.eulers[2] -= 0.6
+                if self.cube.eulers[2] < 0:
+                    self.cube.eulers[2] += 360
+
+            # self.cube.eulers[2] += 0.2
+            # if self.cube.eulers[2] > 360:
+            #     self.cube.eulers[2] -= 360
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -94,53 +123,53 @@ class App:
 class CubeMesh:
     def __init__(self):
         self.verticies = (
-            -0.5, -0.5, -0.5, 0, 0, 0,
-            0.5, -0.5, -0.5, 1, 0, 0,
-            0.5, 0.5, -0.5, 1, 1, 0,
+            -0.5, -0.5, -0.5, 0, 1, 0,  # green
+            0.5, -0.5, -0.5, 0, 1, 1,  # green blue
+            0.5, 0.5, -0.5, 1, 1, 1,  # white
 
-            0.5, 0.5, -0.5, 1, 1, 0,
-            -0.5, 0.5, -0.5, 0, 1, 0,
-            -0.5, -0.5, -0.5, 0, 0, 0,
+            0.5, 0.5, -0.5, 1, 1, 1,  # white
+            -0.5, 0.5, -0.5, 1, 1, 0,  # green red
+            -0.5, -0.5, -0.5, 0, 1, 0,  # green
 
-            -0.5, -0.5, 0.5, 0, 0, 0,
-            0.5, -0.5, 0.5, 1, 0, 0,
-            0.5, 0.5, 0.5, 1, 1, 0,
+            -0.5, -0.5, 0.5, 0, 0, 0,  # black
+            0.5, -0.5, 0.5, 0, 0, 1,  # blue
+            0.5, 0.5, 0.5, 1, 0, 1,  # red Blue
 
-            0.5, 0.5, 0.5, 1, 1, 0,
-            -0.5, 0.5, 0.5, 0, 1, 0,
-            -0.5, -0.5, 0.5, 0, 0, 0,
+            0.5, 0.5, 0.5, 1, 0, 1,  # red Blue
+            -0.5, 0.5, 0.5, 1, 0, 0,  # red
+            -0.5, -0.5, 0.5, 0, 0, 0,  # black
 
-            -0.5, 0.5, 0.5, 1, 0, 0,
-            -0.5, 0.5, -0.5, 1, 1, 0,
-            -0.5, -0.5, -0.5, 0, 1, 0,
+            -0.5, 0.5, 0.5, 1, 0, 0,  # red
+            -0.5, 0.5, -0.5, 1, 1, 0,  # green red
+            -0.5, -0.5, -0.5, 0, 1, 0,  # green
 
-            -0.5, -0.5, -0.5, 0, 1, 0,
-            -0.5, -0.5, 0.5, 0, 0, 0,
-            -0.5, 0.5, 0.5, 1, 0, 0,
+            -0.5, -0.5, -0.5, 0, 1, 0,  # green
+            -0.5, -0.5, 0.5, 0, 0, 0,  # white
+            -0.5, 0.5, 0.5, 1, 0, 0,  # red
 
-            0.5, 0.5, 0.5, 1, 0, 0,
-            0.5, 0.5, -0.5, 1, 1, 0,
-            0.5, -0.5, -0.5, 0, 1, 0,
+            0.5, 0.5, 0.5, 1, 0, 1,  # red blue
+            0.5, 0.5, -0.5, 1, 1, 1,  # white
+            0.5, -0.5, -0.5, 0, 1, 1,  # green blue
 
-            0.5, -0.5, -0.5, 0, 1, 0,
-            0.5, -0.5, 0.5, 0, 0, 0,
-            0.5, 0.5, 0.5, 1, 0, 0,
+            0.5, -0.5, -0.5, 0, 1, 1,  # green blue
+            0.5, -0.5, 0.5, 0, 0, 1,  # blue
+            0.5, 0.5, 0.5, 1, 0, 1,  # red blue
 
-            -0.5, -0.5, -0.5, 0, 1, 0,
-            0.5, -0.5, -0.5, 1, 1, 0,
-            0.5, -0.5, 0.5, 1, 0, 0,
+            -0.5, -0.5, -0.5, 0, 1, 0,  # green
+            0.5, -0.5, -0.5, 0, 1, 1,  # green blue
+            0.5, -0.5, 0.5, 0, 0, 1,  # blue
 
-            0.5, -0.5, 0.5, 1, 0, 0,
-            -0.5, -0.5, 0.5, 0, 0, 0,
-            -0.5, -0.5, -0.5, 0, 1, 0,
+            0.5, -0.5, 0.5, 0, 0, 1,  # blue
+            -0.5, -0.5, 0.5, 0, 0, 0,  # black
+            -0.5, -0.5, -0.5, 0, 1, 0,  # green
 
-            -0.5, 0.5, -0.5, 0, 1, 0,
-            0.5, 0.5, -0.5, 1, 1, 0,
-            0.5, 0.5, 0.5, 1, 0, 0,
+            -0.5, 0.5, -0.5, 1, 1, 0,  # green red
+            0.5, 0.5, -0.5, 1, 1, 1,  # white
+            0.5, 0.5, 0.5, 1, 0, 1,  # red blue
 
-            0.5, 0.5, 0.5, 1, 0, 0,
-            -0.5, 0.5, 0.5, 0, 0, 0,
-            -0.5, 0.5, -0.5, 0, 1, 0,
+            0.5, 0.5, 0.5, 1, 0, 1,  # red blue
+            -0.5, 0.5, 0.5, 1, 0, 0,  # red
+            -0.5, 0.5, -0.5, 1, 1, 0,  # green red
         )
 
         self.verticies = np.array(self.verticies, dtype=np.float32)
