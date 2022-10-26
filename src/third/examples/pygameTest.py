@@ -55,29 +55,29 @@ class App:
                     running = False
 
             if pygame.key.get_pressed()[K_w]:
-                self.cube.eulers[0] += 0.6
+                self.cube.eulers[0] += 1
                 if self.cube.eulers[0] > 360:
                     self.cube.eulers[0] -= 360
             elif pygame.key.get_pressed()[K_s]:
-                self.cube.eulers[0] -= 0.6
+                self.cube.eulers[0] -= 1
                 if self.cube.eulers[0] < 0:
                     self.cube.eulers[0] += 360
 
             if pygame.key.get_pressed()[K_a]:
-                self.cube.eulers[1] += 0.6
+                self.cube.eulers[1] += 1
                 if self.cube.eulers[1] > 360:
                     self.cube.eulers[1] -= 360
             elif pygame.key.get_pressed()[K_d]:
-                self.cube.eulers[1] -= 0.6
+                self.cube.eulers[1] -= 1
                 if self.cube.eulers[1] < 0:
                     self.cube.eulers[1] += 360
 
             if pygame.key.get_pressed()[K_q]:
-                self.cube.eulers[2] += 0.6
+                self.cube.eulers[2] += 1
                 if self.cube.eulers[2] > 360:
                     self.cube.eulers[2] -= 360
             elif pygame.key.get_pressed()[K_e]:
-                self.cube.eulers[2] -= 0.6
+                self.cube.eulers[2] -= 1
                 if self.cube.eulers[2] < 0:
                     self.cube.eulers[2] += 360
 
