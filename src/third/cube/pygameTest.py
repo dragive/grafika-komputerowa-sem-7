@@ -81,10 +81,6 @@ class App:
                 if self.cube.eulers[2] < 0:
                     self.cube.eulers[2] += 360
 
-            # self.cube.eulers[2] += 0.2
-            # if self.cube.eulers[2] > 360:
-            #     self.cube.eulers[2] -= 360
-
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
             glUseProgram(self.shader)
