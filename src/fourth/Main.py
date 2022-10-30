@@ -1,12 +1,15 @@
+import abc
 import tkinter as tk
+from abc import abstractmethod
+from statistics import median
 from tkinter import filedialog, messagebox, HORIZONTAL
+from typing import Any, Callable, Tuple
 
 import PIL.ImageTk
 from PIL import ImageTk
 from PIL.Image import Image, NEAREST
 
-from src.second.formats.JPEGParser import JPEGParser
-from src.second.formats.ppm import PPM
+from src.fourth.formats.JPEGParser import JPEGParser
 
 WIDTH_OF_BUTTONS = 50
 
@@ -16,8 +19,9 @@ class MainWindow(tk.Tk):
         super().__init__("main screen")
         self._buttons_array: tk.Frame | None = None
         self.canvas: tk.Canvas | None = None
-
+        self.WIDTH_OF_BUTTONS = WIDTH_OF_BUTTONS
         self.image_from_pixels: PIL.Image.Image | None = None
+        self.image_from_pixels_original: PIL.Image.Image | None = None
         self.image_tk_from_raw: PIL.PhotoImage | None = None
         self.canvas_drawn_image_id: int | None = None
 
@@ -26,6 +30,16 @@ class MainWindow(tk.Tk):
 
         self.WIDTH = 640
         self.HEIGHT = 480
+
+    def redraw(self, image: PIL.Image.Image):
+
+        self.image_tk_from_raw = ImageTk.PhotoImage(image)
+        if self.canvas_drawn_image_id is None:
+            self.canvas_drawn_image_id = self.canvas.create_image((self.image_from_pixels.width + 7) // 2,
+                                                                  (self.image_from_pixels.height + 7) // 2,
+                                                                  image=self.image_tk_from_raw)
+        else:
+            self.canvas.itemconfig(self.canvas_drawn_image_id, image=self.image_tk_from_raw)
 
     def clear_view(self):
         self.canvas.delete('all')
@@ -90,10 +104,7 @@ class MainWindow(tk.Tk):
             self.image_from_pixels = self.image_from_pixels.resize(
                 (self.WIDTH, int(self.image_from_pixels.height * self.WIDTH / self.image_from_pixels.width)),
                 resample=NEAREST)
-            self.image_tk_from_raw = ImageTk.PhotoImage(self.image_from_pixels)
-            self.canvas_drawn_image_id = self.canvas.create_image((self.image_from_pixels.width + 7) // 2,
-                                                                  (self.image_from_pixels.height + 7) // 2,
-                                                                  image=self.image_tk_from_raw)
+            self.redraw(self.image_from_pixels)
 
     def __command_read_from_file_jpg(self):
         file = filedialog.askopenfilename(filetypes=(
@@ -105,8 +116,9 @@ class MainWindow(tk.Tk):
         if file is not None:
             try:
                 self.parse_image_jpg(file)
-            except Exception:
+            except Exception as e:
                 messagebox.showerror("Niepoprawy format pliku")
+                raise e
         else:
             messagebox.showinfo("Nie wybrano pliku")
 
@@ -143,9 +155,6 @@ class MainWindow(tk.Tk):
                                              command=lambda *args, **kwargs: submit_handler(*args, **kwargs))
         new_window.button_submit.pack()
 
-    def parse_image_ppm(self, filename: str):
-        PPM().read_from_file(filename, self)
-
     def parse_image_jpg(self, filename: str):
         JPEGParser().read_from_file(filename, self)
 
@@ -154,18 +163,152 @@ class MainWindow(tk.Tk):
         MainWindow().initialize_view().mainloop()
 
 
+class PointTransformation:
+    @abstractmethod
+    def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> tuple[int, int, int]:
+        pass
+
+    def apply(self, image: PIL.Image.Image, raw_value: str):
+        try:
+            value: tuple[float, float, float] | tuple[float] | Any = raw_value.split(',')
+            value = tuple(float(x) for x in value)
+            assert len(value) in (1, 3)
+        except Exception as ex:
+            # tk.messagebox.showerror("Cannot apply this value to pixels", "Cannot apply this value to pixels")
+            raise ex
+        if len(value) == 1:
+            value *= 3
+        data = image.getdata()
+        data = [self.transform_pixel(i, value) for i in data]
+        image.putdata(data)
+
+
+class AddPointTransformation(PointTransformation):
+    def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> tuple[int, int, int]:
+        return (
+            int(min(255., pixel[0] + value[0])),
+            int(min(255., pixel[1] + value[1])),
+            int(min(255., pixel[2] + value[2])),
+        )
+
+
+class SubtractPointTransformation(PointTransformation):
+    def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> tuple[int, int, int]:
+        return (
+            int(max(0., pixel[0] - value[0])),
+            int(max(0., pixel[1] - value[1])),
+            int(max(0., pixel[2] - value[2])),
+        )
+
+
+class MultiplyPointTransformation(PointTransformation):
+    def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> tuple[int, int, int]:
+        return (
+            int(min(255., max(0., pixel[0] * value[0]))),
+            int(min(255., max(0., pixel[1] * value[1]))),
+            int(min(255., max(0., pixel[2] * value[2]))),
+        )
+
+
+class DividePointTransformation(PointTransformation):
+    def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> tuple[int, int, int]:
+        return (
+            int(min(255., max(0., pixel[0] / value[0]))),
+            int(min(255., max(0., pixel[1] / value[1]))),
+            int(min(255., max(0., pixel[2] / value[2]))),
+        )
+
+
+class GrayScaleAbstractPointTransformation(PointTransformation, abc.ABC):
+    def apply_gray_scale_transform(self, diff, pixel, value):
+        return tuple(
+            int(pixel_v - (max(min(correct_v, 1.0), 0) * (pixel_v - diff)))
+            for correct_v, pixel_v in zip(value, pixel))
+
+
+class GrayScalePointTransformation(GrayScaleAbstractPointTransformation):
+    def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> Tuple[int, ...]:
+        diff = sum(pixel) // 3
+        ret: Tuple[int, ...] = self.apply_gray_scale_transform(diff, pixel, value)
+
+        return ret
+
+
+class Gray2ScalePointTransformation(GrayScaleAbstractPointTransformation):
+    def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> Tuple[int, ...]:
+        diff = median(pixel)
+        ret: Tuple[int, ...] = self.apply_gray_scale_transform(diff, pixel, value)
+
+        return ret
+
+
 class FilterSettingsTopLevel(tk.Toplevel):
 
     def __init__(self, master: MainWindow) -> None:
         super().__init__(master=master)
 
         self.master: MainWindow = master
+        self.entry_value: tk.Entry
 
         self._init_button_array()
 
     def _init_button_array(self):
-        self.button_add_value: tk.Button = tk.Button(self, text="Add value", width=WIDTH_OF_BUTTONS)
-        self.button_add_value.grid(row=1,column=0, sticky='nesw')
+        self.entry_value: tk.Entry = tk.Entry(self, width=100)
+        self.entry_value.grid(row=0, column=0, sticky='nesw')
+
+        self.button_add_value: tk.Button = tk.Button(self,
+                                                     text="Add value",
+                                                     width=WIDTH_OF_BUTTONS,
+                                                     command=
+                                                     self.get_command_pixel_transformation(AddPointTransformation))
+        self.button_add_value.grid(row=1, column=0, sticky='nesw')
+
+        self.button_subtract_value: tk.Button = tk.Button(self,
+                                                          text="Subract value",
+                                                          width=WIDTH_OF_BUTTONS,
+                                                          command=
+                                                          self.get_command_pixel_transformation(
+                                                              SubtractPointTransformation))
+        self.button_subtract_value.grid(row=2, column=0, sticky='nesw')
+
+        self.button_multiply_value: tk.Button = tk.Button(self,
+                                                          text="Multiply value",
+                                                          width=WIDTH_OF_BUTTONS,
+                                                          command=
+                                                          self.get_command_pixel_transformation(
+                                                              MultiplyPointTransformation))
+        self.button_multiply_value.grid(row=3, column=0, sticky='nesw')
+
+        self.button_divide_value: tk.Button = tk.Button(self,
+                                                        text="Divide value",
+                                                        width=WIDTH_OF_BUTTONS,
+                                                        command=
+                                                        self.get_command_pixel_transformation(
+                                                            DividePointTransformation))
+        self.button_divide_value.grid(row=4, column=0, sticky='nesw')
+
+        self.button_gray_scale_value: tk.Button = tk.Button(self,
+                                                            text="Gray value",
+                                                            width=WIDTH_OF_BUTTONS,
+                                                            command=
+                                                            self.get_command_pixel_transformation(
+                                                                GrayScalePointTransformation))
+        self.button_gray_scale_value.grid(row=5, column=0, sticky='nesw')
+
+        self.button_gray_scale_value2: tk.Button = tk.Button(self,
+                                                             text="Gray2 value",
+                                                             width=WIDTH_OF_BUTTONS,
+                                                             command=
+                                                             self.get_command_pixel_transformation(
+                                                                 Gray2ScalePointTransformation))
+        self.button_gray_scale_value2.grid(row=6, column=0, sticky='nesw')
+
+    def get_command_pixel_transformation(self, name_of_tool: type(PointTransformation)) -> Callable[[Any], Any]:
+        return lambda *args, **kwargs: (
+            name_of_tool()
+            .apply(self.master.image_from_pixels, self.entry_value.get()),
+            self.master.redraw(self.master.image_from_pixels)
+        )
 
 
 if __name__ == '__main__':
