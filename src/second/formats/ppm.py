@@ -80,7 +80,7 @@ class PPM(AbstractFormat):
             height, pixels, width = PPM.read_p6(name)
 
         if t in ('P3', 'P6'):
-            WIDTH = main_window.WIDTH
+            WIDTH = main_window.WIDTH_OF_BUTTONS
             HEIGHT = main_window.HEIGHT
             main_window.image_from_pixels = Image.new("RGB", (width, height), (255, 255, 255))
 
@@ -98,8 +98,8 @@ class PPM(AbstractFormat):
                 image=main_window.image_tk_from_raw,
                 state='normal')
 
-            if main_window.WIDTH < width:
-                main_window.WIDTH = width
+            if main_window.WIDTH_OF_BUTTONS < width:
+                main_window.WIDTH_OF_BUTTONS = width
                 main_window.canvas.config(width=width)
             if main_window.HEIGHT < height:
                 main_window.HEIGHT = height

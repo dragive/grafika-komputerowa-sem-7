@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 from tkinter import colorchooser
 
 
-class MainWindow(tk.Tk):
+class MainWindow(tk.Toplevel):
 
     def __init__(self) -> None:
         super().__init__()
@@ -243,4 +243,4 @@ def _calculate_saturation(pixel, saturation):
 
 
 if __name__ == '__main__':
-    MainWindow().mainloop()
+    MainWindow()
