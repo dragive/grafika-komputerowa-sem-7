@@ -414,6 +414,40 @@ class LowPassFilter(ThreeXThreeTransformation):
         return tuple(int(x) for x in gx)[2, 2]
 
 
+class GausianBlurFilter(ThreeXThreeTransformation):
+    @abstractmethod
+    def transform_pixel(self, pixel: Tuple[
+        tuple[Tuple[int, int, int], Tuple[int, int, int], Tuple[int, int, int]],
+        tuple[Tuple[int, int, int], Tuple[int, int, int], Tuple[int, int, int]],
+        tuple[Tuple[int, int, int], Tuple[int, int, int], Tuple[int, int, int]],]) -> \
+            tuple[int, ...]:
+
+        if len(pixel) != 3:
+            pixel = pixel + (pixel[0],)
+
+        if len(pixel[0]) != 3:
+            pixel = tuple((p[0],) + p for p in pixel)
+
+        x = np.array(
+            [
+                [0.0947416, 0.118318, 0.0947416],
+                [0.118318, 0.147761, 0.118318],
+                [0.0947416, 0.118318, 0.0947416],
+            ]
+        )
+
+        pixel = np.array(pixel)
+        r, g, b = (
+            tuple(tuple(x[0] for x in y) for y in pixel ),
+            tuple(tuple(x[1] for x in y) for y in pixel ),
+            tuple(tuple(x[2] for x in y) for y in pixel ),
+        )
+        gr = np.multiply(x, r)
+        gg = np.multiply(x, g)
+        gb = np.multiply(x, b)
+        return int(np.sum(gr)), int(np.sum(gg)), int(np.sum(gb))
+
+
 class PointTransformation:
     @abstractmethod
     def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> tuple[int, int, int]:
@@ -591,6 +625,15 @@ class FilterSettingsTopLevel(tk.Toplevel):
                                                         self.get_command_filter_transformation(
                                                             SobelFilter))
         self.button_sobel_filter.grid(row=row, column=0, sticky='nesw')
+        row += 1
+
+        self.button_gausian: tk.Button = tk.Button(self,
+                                                   text="Gausian Blue",
+                                                   width=WIDTH_OF_BUTTONS,
+                                                   command=
+                                                   self.get_command_filter_transformation(
+                                                       GausianBlurFilter))
+        self.button_gausian.grid(row=row, column=0, sticky='nesw')
         row += 1
 
     def get_command_pixel_transformation(self, name_of_tool: type(PointTransformation)) -> Callable[[Any], Any]:
