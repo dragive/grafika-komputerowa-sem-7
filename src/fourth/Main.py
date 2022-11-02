@@ -178,8 +178,8 @@ class ThreeXThreeTransformation:
     ]) -> tuple[int, int, int]:
         pass
 
-    def apply(self, image: PIL.Image.Image):
-        data = image.getdata().pixel_access()
+    def apply(self, master, image: PIL.Image.Image):
+        data = image.load()
 
         width, height = image.width, image.height
 
@@ -438,9 +438,9 @@ class GausianBlurFilter(ThreeXThreeTransformation):
 
         pixel = np.array(pixel)
         r, g, b = (
-            tuple(tuple(x[0] for x in y) for y in pixel ),
-            tuple(tuple(x[1] for x in y) for y in pixel ),
-            tuple(tuple(x[2] for x in y) for y in pixel ),
+            tuple(tuple(x[0] for x in y) for y in pixel),
+            tuple(tuple(x[1] for x in y) for y in pixel),
+            tuple(tuple(x[2] for x in y) for y in pixel),
         )
         gr = np.multiply(x, r)
         gg = np.multiply(x, g)
@@ -453,7 +453,7 @@ class PointTransformation:
     def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> tuple[int, int, int]:
         pass
 
-    def apply(self, image: PIL.Image.Image, raw_value: str):
+    def apply(self, master, image: PIL.Image.Image, raw_value: str):
         try:
             value: tuple[float, float, float] | tuple[float] | Any = raw_value.split(',')
             value = tuple(float(x) for x in value)
@@ -463,9 +463,13 @@ class PointTransformation:
             raise ex
         if len(value) == 1:
             value *= 3
-        data = image.getdata()
-        data = [self.transform_pixel(i, value) for i in data]
-        image.putdata(data)
+        # data = image.getdata()
+        # data = [self.transform_pixel(i, value) for i in data]
+        # image.putdata(data)
+        loaded = image.load()
+        for x in range(image.width):
+            for y in range(image.height):
+                loaded[x, y] = self.transform_pixel(loaded[x, y], value)
 
 
 class AddPointTransformation(PointTransformation):
@@ -639,14 +643,14 @@ class FilterSettingsTopLevel(tk.Toplevel):
     def get_command_pixel_transformation(self, name_of_tool: type(PointTransformation)) -> Callable[[Any], Any]:
         return lambda *args, **kwargs: (
             name_of_tool()
-            .apply(self.master.image_from_pixels, self.entry_value.get()),
+            .apply(self.master, self.master.image_from_pixels, self.entry_value.get()),
             self.master.redraw(self.master.image_from_pixels)
         )
 
     def get_command_filter_transformation(self, name_of_tool: type(ThreeXThreeTransformation)) -> Callable[[Any], Any]:
         return lambda *args, **kwargs: (
             name_of_tool()
-            .apply(self.master.image_from_pixels),
+            .apply(self.master, self.master.image_from_pixels),
             self.master.redraw(self.master.image_from_pixels)
         )
 
