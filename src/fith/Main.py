@@ -9,8 +9,12 @@ import PIL.ImageTk
 import numpy as np
 from PIL import ImageTk
 from PIL.Image import Image, NEAREST
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
 from src.fourth.formats.JPEGParser import JPEGParser
+
+MAX_PIXEL_VALUE = 256
 
 WIDTH_OF_BUTTONS = 50
 
@@ -107,12 +111,15 @@ class MainWindow(tk.Tk):
         self.top_level_filters = FilterSettingsTopLevel(self)
 
     def __lunch_on_top_histograms(self):
-        self.top_level_histogram = HistogramSettingsTopLevel(self)
+
+        GrayScalePointTransformation().apply(self, self.image_from_pixels, "1")
+        self.redraw(self.image_from_pixels)
+        self.top_level_histogram_display = HistogramDisplaySettingsTopLevel(self)
 
     def __scale(self):
         if self.image_from_pixels is not None:
             self.image_from_pixels = self.image_from_pixels.resize(
-                (self.WIDTH, int(self.image_from_pixels.height * self.WIDTH / self.image_from_pixels.width)),
+                (self.WIDTH, round(self.image_from_pixels.height * self.WIDTH / self.image_from_pixels.width)),
                 resample=NEAREST)
             self.redraw(self.image_from_pixels)
 
@@ -669,17 +676,59 @@ class AbstractHistogramStrategy:
 
 class HistogramExpandingStrategy(AbstractHistogramStrategy):
 
-    def transform(self, img: tk.Image):
-        pass
+    def transform(self, img: PIL.Image.Image):
+        data = np.mean(np.array(img.getdata()), axis=1)
+        minimum = np.min(data)
+        maximum = np.max(data)
+
+        lower = np.subtract(maximum, minimum)
+
+        img.putdata(
+            list(
+                map(
+                    lambda x: (x, x, x),
+                    map(
+                        lambda pixel: round(np.multiply(
+                            MAX_PIXEL_VALUE,
+                            np.divide(
+                                np.subtract(pixel,
+                                            minimum),
+                                lower),
+                        )), data)
+                )))
 
 
-class HistogramSettingsTopLevel(tk.Toplevel):
+class HistogramEqualizeStrategy(AbstractHistogramStrategy):
+
+    def transform(self, img: PIL.Image.Image):
+        data = np.mean(np.array(img.getdata()), axis=1, dtype=np.uint16)
+        buckets = np.bincount(data, minlength=MAX_PIXEL_VALUE)
+        prob = np.divide(buckets, data.size)
+
+        lut = []
+        for i in prob:
+            if len(lut) == 0:
+                lut.append(i)
+            else:
+                lut.append(np.add(lut[-1], i))
+
+        img.putdata(list(map(
+            lambda x: (x, x, x),
+            map(
+                lambda x: np.array(np.multiply(lut[x], MAX_PIXEL_VALUE), dtype=np.uint16),
+                data
+            )
+        )))
+
+
+class HistogramDisplaySettingsTopLevel(tk.Toplevel):
     def __init__(self, master: MainWindow) -> None:
         super().__init__(master=master)
 
         self.master: MainWindow = master
-        self.entry_value: tk.Entry
         self._row = 0
+        self.plot_canvas: FigureCanvasTkAgg | None = None
+        self.plot = None
 
         self._init_button_array()
 
@@ -689,12 +738,37 @@ class HistogramSettingsTopLevel(tk.Toplevel):
         return self._row
 
     def _init_button_array(self):
-        self.button_add_value: tk.Button = self.add_button("Rozszerzenie histogramu",HistogramExpandingStrategy )
+        self.histogram = self.add_fig()
+
+        self.expand_histogram_button = self.add_button("Expand histogram", HistogramExpandingStrategy)
+        self.move_histogram_button = self.add_button("Equalize histogram", HistogramEqualizeStrategy)
+
+    def draw_histogram_gray(self):
+        self.draw_from_image()
+        self.plot_canvas.draw()
+
+    def add_fig(self):
+        fig = Figure(figsize=(5, 4), dpi=100)
+        self.plot = fig.add_subplot()
+        self.draw_from_image()
+        canvas = FigureCanvasTkAgg(fig, master=self)
+        canvas.draw()
+        widget = canvas.get_tk_widget()
+        self.plot_canvas = canvas
+        widget.grid(row=self.row, column=0, sticky='nsew')
+
+        return widget
+
+    def draw_from_image(self):
+        self.plot.clear()
+        data = self.master.image_from_pixels.getdata()
+        self.plot.hist(np.mean(np.array(data), axis=1), bins=MAX_PIXEL_VALUE)
 
     def get_command_pixel_transformation(self, clazz: type(AbstractHistogramStrategy)) -> Callable:
         return lambda *args, **kwargs: (
             clazz().transform(self.master.image_from_pixels),
-            self.master.redraw(self.master.image_from_pixels)
+            self.master.redraw(self.master.image_from_pixels),
+            self.draw_histogram_gray()
         )
 
     def add_button(self, text: str, strategy_class: type(AbstractHistogramStrategy)) -> tk.Button:
@@ -705,6 +779,7 @@ class HistogramSettingsTopLevel(tk.Toplevel):
                        )
         bt.grid(column=0, row=self.row, sticky='nesw')
         return bt
+
 
 
 if __name__ == '__main__':
