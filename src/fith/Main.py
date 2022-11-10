@@ -102,6 +102,12 @@ class MainWindow(tk.Tk):
 
         self._buttons_array_histograms_button.pack(side=tk.LEFT)
 
+        self._buttons_array_binaryzation_button = tk.Button(master=self._buttons_array,
+                                                            text="Binaryzation",
+                                                            command=self.__lunch_on_top_binaryzation)
+
+        self._buttons_array_binaryzation_button.pack(side=tk.LEFT)
+
         self._buttons_array_label_pixel_value_text_variable = tk.StringVar()
         self._buttons_array_label_pixel_value = tk.Label(self._buttons_array,
                                                          textvariable=self._buttons_array_label_pixel_value_text_variable)
@@ -115,6 +121,12 @@ class MainWindow(tk.Tk):
         GrayScalePointTransformation().apply(self, self.image_from_pixels, "1")
         self.redraw(self.image_from_pixels)
         self.top_level_histogram_display = HistogramDisplaySettingsTopLevel(self)
+
+    def __lunch_on_top_binaryzation(self):
+
+        GrayScalePointTransformation().apply(self, self.image_from_pixels, "1")
+        self.redraw(self.image_from_pixels)
+        self.top_level_binaryzation_display = BinaryzationSettingsTopLevel(self)
 
     def __scale(self):
         if self.image_from_pixels is not None:
@@ -762,7 +774,9 @@ class HistogramDisplaySettingsTopLevel(tk.Toplevel):
     def draw_from_image(self):
         self.plot.clear()
         data = self.master.image_from_pixels.getdata()
-        self.plot.hist(np.mean(np.array(data), axis=1), bins=MAX_PIXEL_VALUE)
+        self.plot.hist(np.mean(np.array(data), axis=1),
+                       bins=256
+                       )
 
     def get_command_pixel_transformation(self, clazz: type(AbstractHistogramStrategy)) -> Callable:
         return lambda *args, **kwargs: (
@@ -780,6 +794,181 @@ class HistogramDisplaySettingsTopLevel(tk.Toplevel):
         bt.grid(column=0, row=self.row, sticky='nesw')
         return bt
 
+
+class AbstractBinaryzationStrategy:
+
+    @abstractmethod
+    def get_threshold(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel") -> int:
+        pass
+
+    def _generate_lut(self, threshold):
+        return np.append(np.zeros(threshold, dtype=np.uint16), np.ones(256 - threshold, dtype=np.uint16))
+
+    def transform(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel"):
+        threshold = self.get_threshold(img, master)
+
+        assert threshold is not None
+        assert 0 <= threshold <= 255
+
+        lut = self._generate_lut(threshold) * 255
+
+        data = np.array(np.mean(np.array(img.getdata()), axis=1), dtype=np.uint16)
+
+        img.putdata(list(map(lambda x: (x, x, x), map(lambda x: lut[x], data))))
+
+
+class BringOriginalBinaryzationStrategy(AbstractBinaryzationStrategy):
+    def get_threshold(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel") -> int:
+        pass
+
+    def transform(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel"):
+        img.putdata(master.original_img.getdata())
+
+
+class UserBinaryzationStrategy(AbstractBinaryzationStrategy):
+
+    def get_threshold(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel") -> int:
+        value = master.scale_user.get()
+
+        try:
+            value = int(value)
+        except ValueError as ex:
+            raise ex
+
+        return value
+
+
+class ProcentBinaryzationStrategy(AbstractBinaryzationStrategy):
+    def _set_master_data(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel"):
+        data = np.mean(np.array(img.getdata()), axis=1, dtype=np.uint16)
+        master.procent_data = np.divide(np.bincount(data, minlength=256), data.size)
+
+    def get_threshold(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel") -> int:
+        value = master.scale_procent.get() / 100
+
+        if master.procent_data is None:
+            self._set_master_data(img, master)
+
+        index = 0
+        s = 0
+        for i, v in enumerate(master.procent_data):
+            s += v
+            if s >= value:
+                index = i
+                break
+
+        return index + 1
+
+
+class MeanIterativeSelectionOriginalBinaryzationStrategy(AbstractBinaryzationStrategy):
+    def _set_master_data(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel"):
+        if master.count_data is None:
+            data = np.mean(np.array(img.getdata()), axis=1, dtype=np.uint16)
+            master.count_data = np.array(np.bincount(data, minlength=256), dtype=np.uint16)
+
+    def get_threshold(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel") -> int:
+        self._set_master_data(img, master)
+        T = [0, 0]
+        while True:
+            first = sum([a * b for a, b in zip(range(len(T)), master.count_data)]) / \
+                    max(1, (2 * sum(master.count_data[:len(T)])))
+            second = sum([a * b for a, b in zip(range(T[-1] + 1, MAX_PIXEL_VALUE), master.count_data)]) / \
+                     max(1, (2 * sum(master.count_data[T[-1] + 1:])))
+            T.append(round(first + second))
+            if T[-1] == T[-2]:
+                break
+        return T[-1]
+
+
+class EntropyBinaryzationStrategy(AbstractBinaryzationStrategy):
+    def _set_master_data(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel"):
+        if master.procent_data is None:
+            data = img.getdata()
+            ret = self.calculate_prob_rates(data)
+            master.procent_data = ret
+
+    def calculate_prob_rates(self, data):
+        data = np.mean(np.array(data), axis= 1, dtype=np.uint16)
+        ret = np.divide(np.bincount(data, minlength=256), data.size)
+        return ret
+
+    def get_threshold(self, img: PIL.Image.Image, master: "BinaryzationSettingsTopLevel") -> int:
+        self._set_master_data(img, master)
+
+        sum_of_probs_of_zeros = 0
+        max_entropy = 0
+        ret = 0
+        for i, v in enumerate(master.procent_data):
+            sum_of_probs_of_zeros += v
+            entropy = self.entrypy_from_imge_data((sum_of_probs_of_zeros, 1. - sum_of_probs_of_zeros))
+
+            if entropy > max_entropy:
+                max_entropy= entropy
+                ret = i
+
+        return ret
+
+        return best_threshold
+
+    def entrypy_from_imge_data(self, procent_data):
+        return -np.sum([i * np.log(i) if i > 0 else 0 for i in procent_data])
+
+
+class BinaryzationSettingsTopLevel(tk.Toplevel):
+    def __init__(self, master: MainWindow) -> None:
+        super().__init__(master=master)
+
+        self.master: MainWindow = master
+        self._row = 0
+        self.scale_user: tk.Scale | None = None
+        self.original_img = self.master.image_from_pixels.copy()
+        self.procent_data = None
+        self.count_data = None
+        self._init_button_array()
+
+    @property
+    def row(self):
+        self._row += 1
+        return self._row
+
+    def _init_button_array(self):
+        self.scale_user: tk.Scale = tk.Scale(self, orient=HORIZONTAL, from_=0, to=255,
+                                             command=self.__apply_user_defined_threshold)
+        self.scale_user.grid(row=self.row, column=0, sticky='nsew')
+
+        self.scale_procent: tk.Scale = tk.Scale(self, orient=HORIZONTAL, from_=0, to=100,
+                                                command=self.__apply_procent_defined_threshold)
+        self.scale_procent.grid(row=self.row, column=0, sticky='nsew')
+
+        self.original_img_strategy = self.add_button("Original", BringOriginalBinaryzationStrategy)
+        self.mean_iterative_selection_img_strategy = self.add_button("Mean Iterative Selection",
+                                                                     MeanIterativeSelectionOriginalBinaryzationStrategy)
+        self.mean_iterative_selection_img_strategy = self.add_button("Entropy", EntropyBinaryzationStrategy)
+
+    def __apply_user_defined_threshold(self, *args, **kwargs):
+        BringOriginalBinaryzationStrategy().transform(self.master.image_from_pixels, self)
+        UserBinaryzationStrategy().transform(self.master.image_from_pixels, self)
+        self.master.redraw(self.master.image_from_pixels),
+
+    def __apply_procent_defined_threshold(self, *args, **kwargs):
+        BringOriginalBinaryzationStrategy().transform(self.master.image_from_pixels, self)
+        ProcentBinaryzationStrategy().transform(self.master.image_from_pixels, self)
+        self.master.redraw(self.master.image_from_pixels),
+
+    def get_command_pixel_transformation(self, clazz: type(AbstractBinaryzationStrategy)) -> Callable:
+        return lambda *args, **kwargs: (
+            clazz().transform(self.master.image_from_pixels, master=self),
+            self.master.redraw(self.master.image_from_pixels),
+        )
+
+    def add_button(self, text: str, strategy_class: type(AbstractBinaryzationStrategy)) -> tk.Button:
+        bt = tk.Button(self,
+                       text=text,
+                       width=WIDTH_OF_BUTTONS,
+                       command=self.get_command_pixel_transformation(strategy_class)
+                       )
+        bt.grid(column=0, row=self.row, sticky='nesw')
+        return bt
 
 
 if __name__ == '__main__':
