@@ -9,7 +9,7 @@ from src.sixth.tools.PickTool import PickTool
 from src.sixth.tools.RectangleTool import RectangleTool
 from src.sixth.utils import Buttons
 
-BEZIER_POINTS = 20
+BEZIER_POINTS = 500
 
 
 class Tools(enum.Enum):
@@ -81,8 +81,7 @@ class MainWindow:
             y = (1 - i) * y1 + i * y2
             return (x, y)
 
-
-        final_collection = []
+        pre_final_collection = []
         for _i in range(BEZIER_POINTS):
             i = _i / (BEZIER_POINTS - 1)
             coll = collection
@@ -90,17 +89,24 @@ class MainWindow:
                 coll = self.double_collection([
                     _calculate_point(c, i) for c in coll
                 ])
+
             if coll:
-                final_collection.append(coll[0])
+                pre_final_collection.append(coll[0])
+
+        final_collection = []
+        for _i, element in enumerate(pre_final_collection):
+            i = _i / (BEZIER_POINTS - 1)
+
+            final_collection.append(_calculate_point(element, i))
+        final_collection = self.double_collection(final_collection)
 
         for i in self.bezier_lines:
             self.canvas.delete(i)
 
         self.bezier_lines = [
-            self.canvas.create_line(*line)
+            self.canvas.create_line(*line, width=2)
             for line in final_collection
         ]
-
 
     def double_collection(self, _points_for_processing):
         _double_points = []
@@ -114,7 +120,7 @@ class MainWindow:
             self.canvas.delete(i)
 
         self.point_lines = [
-            self.canvas.create_line(*pair)
+            self.canvas.create_line(*pair,fill='red')
             for pair in collection
         ]
 
