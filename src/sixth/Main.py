@@ -32,6 +32,10 @@ class MainWindow:
         self.side_settings = tk.Frame(self.main)
         self.side_settings.grid(row=1, column=1)
 
+        self.point_lines = []
+
+        self.points = list()
+
         self.tool: AbstractTool = Tools.PICK.value(main_window=self)
 
         self.add_side_settings_contents()
@@ -41,6 +45,34 @@ class MainWindow:
         self.initialize_binding_handler()
 
         self.main.mainloop()
+
+    def redraw_bezier(self):
+        def _reduce_points_coords(coords: tuple[float, float, float, float]) -> tuple[float, float]:
+            return (coords[0] + coords[2]) / 2, (coords[1] + coords[3]) / 2
+
+        def _map_to_coords(identifier: int) -> tuple[float, float, float, float]:
+            return self.canvas.coords(identifier)
+
+        def map_points():
+            return list(
+                map(_reduce_points_coords,
+                    map(_map_to_coords,
+                        self.points
+                        )
+                    )
+            )
+
+        points = map_points()
+        collection = map(lambda x: (a for b in x for a in b), \
+                         ((points[index], points[index + 1]) for index in range(len(points) - 1)))
+
+        for i in self.point_lines:
+            self.canvas.delete(i)
+
+        self.point_lines = [
+            self.canvas.create_line(*pair)
+            for pair in collection
+        ]
 
     def __set_tool(self):
         if isinstance(self.tool, Tools.PICK.value):
@@ -149,7 +181,7 @@ class MainWindow:
     def ___execute_in_set(self, button: Buttons, *args, **kwargs):
         a = {}
         for i in self.__key_mappings[button]:
-            x = i(self, *args, **kwargs, width = 2)
+            x = i(self, *args, **kwargs, width=2)
             a.update(x)
 
         self.bind_buttons(a)

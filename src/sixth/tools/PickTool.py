@@ -44,6 +44,7 @@ class PickTool(AbstractTool):
             delta = -self._first_click_cords[0] + cords[0], -self._first_click_cords[1] + cords[1]
             self._first_click_cords = cords
             main_window.canvas.move(self._moved_object, *delta)
+            main_window.redraw_bezier()
         return super().after_first_click_motion(*args, **kwargs)
 
     def double_click_in_canvas(self, main_window: 'MainWindow', event: tk.Event, *args, **kwargs):
