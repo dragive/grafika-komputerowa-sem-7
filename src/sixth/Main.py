@@ -2,12 +2,14 @@ import enum
 import tkinter as tk
 from tkinter import Button
 from tkinter import messagebox
-from typing import Callable, Union, Dict
+from typing import Callable, Union, Dict, Collection
 
 from src.sixth.tools.AbstractTool import AbstractTool
 from src.sixth.tools.PickTool import PickTool
 from src.sixth.tools.RectangleTool import RectangleTool
 from src.sixth.utils import Buttons
+
+BEZIER_POINTS = 20
 
 
 class Tools(enum.Enum):
@@ -33,8 +35,8 @@ class MainWindow:
         self.side_settings.grid(row=1, column=1)
 
         self.point_lines = []
-
-        self.points = list()
+        self.bezier_lines = []
+        self.points = []
 
         self.tool: AbstractTool = Tools.PICK.value(main_window=self)
 
@@ -47,7 +49,7 @@ class MainWindow:
         self.main.mainloop()
 
     def redraw_bezier(self):
-        def _reduce_points_coords(coords: tuple[float, float, float, float]) -> tuple[float, float]:
+        def _reduce_points_coords(coords: tuple[float, float, float, float]) -> tuple[float, float] | None:
             return (coords[0] + coords[2]) / 2, (coords[1] + coords[3]) / 2
 
         def _map_to_coords(identifier: int) -> tuple[float, float, float, float]:
@@ -63,9 +65,51 @@ class MainWindow:
             )
 
         points = map_points()
-        collection = map(lambda x: (a for b in x for a in b), \
-                         ((points[index], points[index + 1]) for index in range(len(points) - 1)))
+        collection = [x for x in map(
+            lambda x: list(a for b in x for a in b),
+            ((points[index], points[index + 1]) for index in range(len(points) - 1))
+        )]
 
+        self._draw_lines_between_points(collection)
+        self._draw_bezier(collection)
+
+    def _draw_bezier(self, collection: Collection[tuple[float, float, float, float]]):
+
+        def _calculate_point(c, i):
+            x1, y1, x2, y2 = c
+            x = (1 - i) * x1 + i * x2
+            y = (1 - i) * y1 + i * y2
+            return (x, y)
+
+
+        final_collection = []
+        for _i in range(BEZIER_POINTS):
+            i = _i / (BEZIER_POINTS - 1)
+            coll = collection
+            while len(coll) > 1:
+                coll = self.double_collection([
+                    _calculate_point(c, i) for c in coll
+                ])
+            if coll:
+                final_collection.append(coll[0])
+
+        for i in self.bezier_lines:
+            self.canvas.delete(i)
+
+        self.bezier_lines = [
+            self.canvas.create_line(*line)
+            for line in final_collection
+        ]
+
+
+    def double_collection(self, _points_for_processing):
+        _double_points = []
+        for i in range(len(_points_for_processing) - 1):
+            temp = [] + list(_points_for_processing[i]) + list(_points_for_processing[i + 1])
+            _double_points.append(temp)
+        return _double_points
+
+    def _draw_lines_between_points(self, collection):
         for i in self.point_lines:
             self.canvas.delete(i)
 

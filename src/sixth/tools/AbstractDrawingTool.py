@@ -37,11 +37,7 @@ class AbstractDrawingTool(AbstractTool):
         return super().fist_click_in_canvas(*args, **kwargs)
 
     def after_first_click_motion(self, main_window: 'MainWindow', *args, **kwargs) -> Dict['Buttons', Callable]:
-        if self._drawn_object is not None:
-            main_window.canvas.delete(self._drawn_object)
 
-        self._drawn_object = self.generate_object(main_window.canvas, *self._initial_cords, args[0].x, args[0].y,
-                                                  **kwargs)
 
         return super().after_first_click_motion(*args, **kwargs)
 
