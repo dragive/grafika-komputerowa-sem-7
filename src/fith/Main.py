@@ -908,8 +908,6 @@ class EntropyBinaryzationStrategy(AbstractBinaryzationStrategy):
 
         return ret
 
-        return best_threshold
-
     def entrypy_from_imge_data(self, procent_data):
         return -np.sum([i * np.log(i) if i > 0 else 0 for i in procent_data])
 
