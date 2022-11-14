@@ -1,7 +1,6 @@
 import enum
 import tkinter as tk
 from tkinter import Button
-from tkinter import messagebox
 from typing import Callable, Union, Dict, Collection
 
 from src.sixth.tools.AbstractTool import AbstractTool
@@ -120,17 +119,17 @@ class MainWindow:
             self.canvas.delete(i)
 
         self.point_lines = [
-            self.canvas.create_line(*pair,fill='red')
+            self.canvas.create_line(*pair, fill='red')
             for pair in collection
         ]
 
     def __set_tool(self):
-        if isinstance(self.tool, Tools.PICK.value):
-            self.disable_button(self.side_settings_text_field_button_submit)
-            self.__set_impl_none()
-        else:
-            self.enable_button(self.side_settings_text_field_button_submit)
-            self.__set_impl_4_args_creating_object()
+        # if isinstance(self.tool, Tools.PICK.value):
+        #     self.disable_button(self.side_settings_text_field_button_submit)
+        #     self.__set_impl_none()
+        # else:
+        #     self.enable_button(self.side_settings_text_field_button_submit)
+        #     self.__set_impl_4_args_creating_object()
 
         for k, v in self.__get_buttons_dict.items():
             if not isinstance(self.tool, k.value):
@@ -164,14 +163,16 @@ class MainWindow:
     def __submit_side_settings_text_field_params(self):
         abstract_tool: AbstractTool = self.tool
         if abstract_tool is not None:
-            values = self.side_settings_text_field_params.get().split(',')
-            try:
-                values = tuple(int(i) for i in values)
-            except ValueError as ex:
-                tk.messagebox.showerror("Value Error", "Only int values can be parsed!")
-                print(ex)
+            values = self.side_settings_text_field_params.get().split(';')
 
-            self.parsing_args_def(abstract_tool, values)
+            values = list(map(lambda x: tuple(map(float, x)), map(lambda x: x.split(','), values)))
+
+            for coords in values:
+                self.create_point(coords)
+
+    def create_point(self, coords: tuple[float, ...]) -> None:
+        self.points.append(RectangleTool(self).generate_object(self.canvas, *coords))
+        self.redraw_bezier()
 
     def ___parsing_text_area_creating_object_4_args_from_tools_impl(self, abstract_tool, values):
         if len(values) == 4:
