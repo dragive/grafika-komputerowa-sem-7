@@ -22,7 +22,7 @@ class AbstractDrawingTool(AbstractTool):
 
         self._initial_cords = args[0].x, args[0].y
 
-        self._drawn_object = self.generate_object(main_window.canvas, *ashself._initial_cords, *self._initial_cords,
+        self._drawn_object = self.generate_object(main_window.canvas, *self._initial_cords, *self._initial_cords,
                                                   **kwargs)
 
         return super().fist_click_in_canvas(*args, **kwargs)
