@@ -60,13 +60,7 @@ class PickTool(AbstractTool):
         raw_coords = main_window.canvas.coords(identifier)
         xs, ys = raw_coords[::2], raw_coords[1::2]
 
-        min_x = min(xs)
-        avg_x = mean(xs)
-        max_x = max(xs)
-
-        min_y = min(ys)
-        avg_y = mean(ys)
-        max_y = max(ys)
+        avg_x, avg_y, max_x, max_y, min_x, min_y = self.prepare_x_y_cords_stat(xs, ys)
 
         for x in [min_x, max_x]:
             for y in [min_y, max_y]:
@@ -79,6 +73,15 @@ class PickTool(AbstractTool):
                                                            fill="yellow")
 
         main_window.items_to_be_deleted_at_changing_tools = self.center_point
+
+    def prepare_x_y_cords_stat(self, xs, ys):
+        min_x = min(xs)
+        avg_x = mean(xs)
+        max_x = max(xs)
+        min_y = min(ys)
+        avg_y = mean(ys)
+        max_y = max(ys)
+        return avg_x, avg_y, max_x, max_y, min_x, min_y
 
     def check_item(self, ids, main_window):
         main_window.checked_item = ids
