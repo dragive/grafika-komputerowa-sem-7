@@ -1,7 +1,6 @@
 import enum
 
 from src.seventh.tools.AbstractTool import AbstractTool
-from src.seventh.tools.LineTool import LineTool
 from src.seventh.tools.OvalTool import OvalTool
 from src.seventh.tools.PickTool import PickTool
 from src.seventh.tools.RectangleTool import RectangleTool
@@ -9,7 +8,6 @@ from src.seventh.tools.RectangleTool import RectangleTool
 
 class Tools(enum.Enum):
     PICK: type(AbstractTool) = PickTool
-    LINE: type(AbstractTool) = LineTool
     OVAL: type(AbstractTool) = OvalTool
     SQUARE: type(AbstractTool) = RectangleTool
 

@@ -4,11 +4,10 @@ from json import dumps, loads
 from tkinter import Button
 from tkinter import filedialog
 from tkinter import messagebox
-from typing import Callable, Union, Dict
+from typing import Callable, Union, Dict, Set
 
 from src.seventh.tools.AbstractTool import AbstractTool
 from src.seventh.tools.DeleteTool import DeleteTool
-from src.seventh.tools.LineTool import LineTool
 from src.seventh.tools.OvalTool import OvalTool
 from src.seventh.tools.PickTool import PickTool
 from src.seventh.tools.RectangleTool import RectangleTool
@@ -18,7 +17,7 @@ from src.seventh.utils import Buttons
 class Tools(enum.Enum):
     DELETE: type(AbstractTool) = DeleteTool
     PICK: type(AbstractTool) = PickTool
-    LINE: type(AbstractTool) = LineTool
+    # LINE: type(AbstractTool) = LineTool
     OVAL: type(AbstractTool) = OvalTool
     SQUARE: type(AbstractTool) = RectangleTool
 
@@ -30,7 +29,7 @@ class MainWindow:
         self.side_settings_text_field_params: Union[None, tk.Entry] = None
         self.side_settings_button_pick: Union[None, tk.Button] = None
         self.side_settings_button_square: Union[None, tk.Button] = None
-        self.side_settings_button_line: Union[None, tk.Button] = None
+        # self.side_settings_button_line: Union[None, tk.Button] = None
         self.side_settings_button_oval: Union[None, tk.Button] = None
 
         self.__key_mappings: Dict[Buttons, set[Callable]] = {}
@@ -43,6 +42,9 @@ class MainWindow:
         self.side_settings = tk.Frame(self.main)
         self.side_settings.grid(row=1, column=1)
 
+        self.checked_item: None | int = None
+        self._items_to_be_deleted_at_changing_tools: None | Set[int] = set()
+
         self.tool: AbstractTool = Tools.PICK.value(main_window=self)
 
         self.add_side_settings_contents()
@@ -53,8 +55,17 @@ class MainWindow:
 
         self.main.mainloop()
 
+    @property
+    def items_to_be_deleted_at_changing_tools(self) -> None:
+        return self._items_to_be_deleted_at_changing_tools
+
+    @items_to_be_deleted_at_changing_tools.setter
+    def items_to_be_deleted_at_changing_tools(self, value: int) -> None:
+        self._items_to_be_deleted_at_changing_tools.add(value)
+
     def __set_tool(self):
-        # log(self.tool)
+        self.delete_items_to_be_deleted()
+
         if isinstance(self.tool, Tools.PICK.value):
             self.disable_button(self.side_settings_text_field_button_submit)
             self.__set_impl_none()
@@ -71,6 +82,10 @@ class MainWindow:
         self.__reset_bindings_in_canvas()
         self.bind_buttons(self.tool.get_initial_mapping)
 
+    def delete_items_to_be_deleted(self):
+        for item in self._items_to_be_deleted_at_changing_tools:
+            self.canvas.delete(item)
+
     def __reset_bindings_in_canvas(self):
         key_mappings: Dict[Buttons, set[Callable]] = self.__key_mappings
         for b in Buttons:
@@ -80,7 +95,6 @@ class MainWindow:
     def __get_buttons_dict(self) -> dict[type(AbstractTool), Button]:
         return {
             Tools.PICK: self.side_settings_button_pick,
-            Tools.LINE: self.side_settings_button_line,
             Tools.OVAL: self.side_settings_button_oval,
             Tools.SQUARE: self.side_settings_button_square,
             Tools.DELETE: self.side_settings_button_delete,
@@ -102,9 +116,10 @@ class MainWindow:
         self.tool = Tools.SQUARE.value(main_window=self)
         self.__set_tool()
 
-    def __set_tool_line(self):
-        self.tool = Tools.LINE.value(main_window=self)
-        self.__set_tool()
+    #
+    # def __set_tool_line(self):
+    #     self.tool = Tools.LINE.value(main_window=self)
+    #     self.__set_tool()
 
     def __submit_side_settings_text_field_params(self):
         abstract_tool: AbstractTool = self.tool
@@ -137,9 +152,6 @@ class MainWindow:
 
         self.side_settings_button_delete = tk.Button(self.side_settings, text="Delete", command=self.__set_tool_delete)
         self.side_settings_button_delete.pack(side=tk.LEFT)
-
-        self.side_settings_button_line = tk.Button(self.side_settings, text="Line", command=self.__set_tool_line)
-        self.side_settings_button_line.pack(side=tk.LEFT)
 
         self.side_settings_button_oval = tk.Button(self.side_settings, text="Oval", command=self.__set_tool_oval)
         self.side_settings_button_oval.pack(side=tk.LEFT)
@@ -191,9 +203,6 @@ class MainWindow:
                         self.canvas.create_rectangle(*i[1]['coords'], width=2)
                     if i[1]['type'] == 'oval':
                         self.canvas.create_oval(*i[1]['coords'], width=2)
-                    if i[1]['type'] == 'line':
-                        self.canvas.create_line(*i[1]['coords'], width=2)
-                    # print(i)
             except Exception:
                 messagebox.showerror("Error while parsing a file!")
 
@@ -233,7 +242,7 @@ class MainWindow:
         # print(button)
         a = {}
         for i in self.__key_mappings[button]:
-            x = i(self, *args, **kwargs, width = 2)
+            x = i(self, *args, **kwargs, width=2)
             a.update(x)
 
         self.bind_buttons(a)
