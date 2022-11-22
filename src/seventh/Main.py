@@ -85,6 +85,7 @@ class MainWindow:
     def delete_items_to_be_deleted(self):
         for item in self._items_to_be_deleted_at_changing_tools:
             self.canvas.delete(item)
+        self._items_to_be_deleted_at_changing_tools.clear()
 
     def __reset_bindings_in_canvas(self):
         key_mappings: Dict[Buttons, set[Callable]] = self.__key_mappings

@@ -1,6 +1,6 @@
 import tkinter as tk
 from statistics import mean
-from typing import Dict, Callable
+from typing import Dict, Callable, Collection
 
 from src.seventh.tools.AbstractTool import AbstractTool
 
@@ -11,6 +11,11 @@ class PickTool(AbstractTool):
         self._moved_object: int | None = None
         self.center_point: int | None = None
         self._first_click_cords: tuple[int] | list[int] | None = None
+
+        self.initial_polygon_coords: None | Collection = None
+        self.initial_box_point_coords: None | Collection = None
+        self.initial_other_box_point_coords: None | Dict[int, Collection[int, ...]] = None
+
         super().__init__(*args, main_window=main_window, **kwargs)
 
     @property
@@ -27,13 +32,16 @@ class PickTool(AbstractTool):
     def fist_click_in_canvas(self, main_window, event: tk.Event, *args, **kwargs) -> Dict['Buttons', Callable]:
         d = super().fist_click_in_canvas(*args, **kwargs)
 
+        # self.reset(main_window)
+
         cords = event.x, event.y
         ids = main_window.canvas.find_overlapping(*cords, *cords)
 
         intersection_with_box_points = main_window.items_to_be_deleted_at_changing_tools.intersection(ids)
         if intersection_with_box_points:
             self._first_click_cords = cords
-            self._moved_object = self.center_point
+            self._moved_object = next(iter(intersection_with_box_points))
+
             return d
 
         identifier = None
@@ -55,6 +63,10 @@ class PickTool(AbstractTool):
         self.uncheck_item(main_window)
         main_window.delete_items_to_be_deleted()
         self.center_point = None
+
+        self.initial_polygon_coords: None | Collection = None
+        self.initial_box_point_coords: None | Collection = None
+        self.initial_other_box_point_coords: None | Dict[int, Collection[int, ...]] = None
 
     def generate_box_points(self, identifier, main_window):
         raw_coords = main_window.canvas.coords(identifier)
@@ -100,8 +112,53 @@ class PickTool(AbstractTool):
             main_window.canvas.move(self._moved_object, *delta)
 
             if self._moved_object not in main_window.items_to_be_deleted_at_changing_tools:
-                main_window.delete_items_to_be_deleted()
-                self.generate_box_points(self._moved_object, main_window)
+
+                for obj in main_window.items_to_be_deleted_at_changing_tools:
+                    main_window.canvas.move(obj, *delta)
+            else:
+                if self._moved_object != self.center_point:
+                    if self.initial_polygon_coords is None or self.initial_other_box_point_coords is None:
+                        self.initial_polygon_coords = main_window.canvas.coords(main_window.checked_item)
+                        self.initial_box_point_coords = (mean(main_window.canvas.coords(self._moved_object)[::2]),
+                                                         mean(main_window.canvas.coords(self._moved_object)[1::2]))
+                        self.initial_other_box_point_coords = {
+                            o: (mean(main_window.canvas.coords(o)[::2]),
+                                mean(main_window.canvas.coords(o)[1::2]))
+                            for o in main_window.items_to_be_deleted_at_changing_tools
+                        }
+                        pass
+
+                    current_box_point_coords = (mean(main_window.canvas.coords(self._moved_object)[::2]),
+                                                mean(main_window.canvas.coords(self._moved_object)[1::2]))
+
+                    center_point_center = (mean(main_window.canvas.coords(self.center_point)[::2]),
+                                           mean(main_window.canvas.coords(self.center_point)[1::2]))
+
+                    scale = list(
+                        map(
+                            (lambda tu: (tu[0] / tu[1])),
+                            zip([a - b for a, b in zip(current_box_point_coords, center_point_center)],
+                                [a - b for a, b in zip(self.initial_box_point_coords, center_point_center)]))
+                    )
+
+                    new_cords = []
+
+                    for i, x in enumerate(self.initial_polygon_coords):
+                        new_cords.append((x - center_point_center[i % 2]) * scale[i % 2] + center_point_center[i % 2])
+
+                    main_window.canvas.coords(main_window.checked_item, *new_cords)
+
+                    for point in main_window.items_to_be_deleted_at_changing_tools:
+                        if point == self._moved_object:
+                            continue
+                        initial_coords = self.initial_other_box_point_coords[point]
+                        coords = [(x - center_point_center[i % 2]) * scale[i % 2] + center_point_center[i % 2]
+                                  for i, x in enumerate(initial_coords)]
+                        main_window.canvas.coords(point,
+                                                  coords[0]+5, coords[1]+5,
+                                                  coords[0]-5, coords[1]-5,
+                                                  )
+
         return super().after_first_click_motion(*args, **kwargs)
 
     def double_click_in_canvas(self, main_window: 'MainWindow', event: tk.Event, *args, **kwargs):
@@ -131,5 +188,8 @@ class PickTool(AbstractTool):
         d.update({
             Buttons.RIGHT_BUTTON: None,
         })
+
+        self.initial_polygon_coords = None
+        self.initial_box_point_coords = None
 
         return d
