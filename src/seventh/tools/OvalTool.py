@@ -15,8 +15,9 @@ class OvalTool(AbstractDrawingTool):
     def generate_object(self, canvas: tk.Canvas, x1, y1, x2, y2, *args, **kwargs):
         super().generate_object(canvas, x1, y1, x2, y2, *args, **kwargs)
         # return canvas.create_oval(x1, y1, x2, y2, *args, **self.get_tags(), **kwargs)
-        ry = np.abs(np.subtract(y1, y2))
-        rx = np.abs(np.subtract(x1, x2))
+        ry = np.divide(np.abs(np.subtract(y1, y2)),2)
+        rx = np.divide(np.abs(np.subtract(x1, x2)),2)
+
         center = np.mean([x1, x2]), np.mean([y1, y2])
         return canvas.create_polygon(*[unpacked
                                        for i in np.arange(0, 2*np.pi, 2*np.pi / STEPS)

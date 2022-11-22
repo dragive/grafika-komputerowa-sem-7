@@ -1,6 +1,9 @@
 import tkinter as tk
+from numbers import Real
 from statistics import mean
 from typing import Dict, Callable, Collection
+
+import numpy as np
 
 from src.seventh.tools.AbstractTool import AbstractTool
 
@@ -10,6 +13,7 @@ class PickTool(AbstractTool):
     def __init__(self, *args, main_window: 'MainWindow' = None, **kwargs) -> None:
         self._moved_object: int | None = None
         self.center_point: int | None = None
+        self.rotation_point: int | None = None
         self._first_click_cords: tuple[int] | list[int] | None = None
 
         self.initial_polygon_coords: None | Collection = None
@@ -31,8 +35,6 @@ class PickTool(AbstractTool):
 
     def fist_click_in_canvas(self, main_window, event: tk.Event, *args, **kwargs) -> Dict['Buttons', Callable]:
         d = super().fist_click_in_canvas(*args, **kwargs)
-
-        # self.reset(main_window)
 
         cords = event.x, event.y
         ids = main_window.canvas.find_overlapping(*cords, *cords)
@@ -86,6 +88,12 @@ class PickTool(AbstractTool):
 
         main_window.items_to_be_deleted_at_changing_tools = self.center_point
 
+        self.rotation_point = main_window.canvas.create_oval(avg_x +10, avg_y -5,
+                                                             avg_x + 20, avg_y + 5,
+                                                             fill="green")
+
+        main_window.items_to_be_deleted_at_changing_tools = self.rotation_point
+
     def prepare_x_y_cords_stat(self, xs, ys):
         min_x = min(xs)
         avg_x = mean(xs)
@@ -111,16 +119,20 @@ class PickTool(AbstractTool):
             self._first_click_cords = cords
             main_window.canvas.move(self._moved_object, *delta)
 
+            if self._moved_object == self.center_point:
+                main_window.canvas.move(self.rotation_point, *delta)
+
             if self._moved_object not in main_window.items_to_be_deleted_at_changing_tools:
 
                 for obj in main_window.items_to_be_deleted_at_changing_tools:
                     main_window.canvas.move(obj, *delta)
             else:
-                if self._moved_object != self.center_point:
-                    if self.initial_polygon_coords is None or self.initial_other_box_point_coords is None:
+                if self._moved_object not in (self.center_point, self.rotation_point):
+                    if self.initial_polygon_coords is None \
+                            or self.initial_other_box_point_coords is None \
+                            or self.initial_box_point_coords is None:
                         self.initial_polygon_coords = main_window.canvas.coords(main_window.checked_item)
-                        self.initial_box_point_coords = (mean(main_window.canvas.coords(self._moved_object)[::2]),
-                                                         mean(main_window.canvas.coords(self._moved_object)[1::2]))
+                        self.initial_box_point_coords = self.get_mean_cords_of_point(main_window, self._moved_object)
                         self.initial_other_box_point_coords = {
                             o: (mean(main_window.canvas.coords(o)[::2]),
                                 mean(main_window.canvas.coords(o)[1::2]))
@@ -128,11 +140,8 @@ class PickTool(AbstractTool):
                         }
                         pass
 
-                    current_box_point_coords = (mean(main_window.canvas.coords(self._moved_object)[::2]),
-                                                mean(main_window.canvas.coords(self._moved_object)[1::2]))
-
-                    center_point_center = (mean(main_window.canvas.coords(self.center_point)[::2]),
-                                           mean(main_window.canvas.coords(self.center_point)[1::2]))
+                    current_box_point_coords = self.get_mean_cords_of_point(main_window, self._moved_object)
+                    center_point_center = self.get_mean_cords_of_point(main_window, self.center_point)
 
                     scale = list(
                         map(
@@ -149,17 +158,56 @@ class PickTool(AbstractTool):
                     main_window.canvas.coords(main_window.checked_item, *new_cords)
 
                     for point in main_window.items_to_be_deleted_at_changing_tools:
-                        if point == self._moved_object:
+                        if point in (self._moved_object, self.rotation_point):
                             continue
                         initial_coords = self.initial_other_box_point_coords[point]
                         coords = [(x - center_point_center[i % 2]) * scale[i % 2] + center_point_center[i % 2]
                                   for i, x in enumerate(initial_coords)]
                         main_window.canvas.coords(point,
-                                                  coords[0]+5, coords[1]+5,
-                                                  coords[0]-5, coords[1]-5,
+                                                  coords[0] + 5, coords[1] + 5,
+                                                  coords[0] - 5, coords[1] - 5,
                                                   )
+                elif self._moved_object == self.rotation_point:
+                    if self.initial_polygon_coords is None:
+                        self.initial_polygon_coords = main_window.canvas.coords(main_window.checked_item)
 
+                    center_points_coords = self.get_mean_cords_of_point(main_window, self.center_point)
+
+                    x2, y2 = [a - b for a, b in zip(self.get_mean_cords_of_point(main_window, self.rotation_point),
+                                                    center_points_coords)]
+
+                    y2 = -y2
+                    sin = np.divide(y2, np.sqrt(np.add(pow(x2, 2), pow(y2, 2))))
+                    cos = np.divide(x2,  np.sqrt(np.add(pow(x2, 2), pow(y2, 2))))
+
+                    def map_to_new_coords(p: tuple[Real, Real]):
+                        x, y = p
+                        x -= center_points_coords[0]
+                        y -= center_points_coords[1]
+
+                        y *= -1
+                        new_x, new_y = (x * cos - y * sin, x * sin + y * cos)
+
+                        new_y *= -1
+
+                        new_x += center_points_coords[0]
+                        new_y += center_points_coords[1]
+
+                        return round(new_x), round(new_y)
+
+                    initial_cords_of_checked_item_grouped = list(zip(
+                        self.initial_polygon_coords[::2],
+                        self.initial_polygon_coords[1::2]))
+
+                    new_coords_of_checked_item = list(map(map_to_new_coords, initial_cords_of_checked_item_grouped))
+
+                    unpacked_new_coords = [a for i in new_coords_of_checked_item for a in i]
+                    main_window.canvas.coords(main_window.checked_item, *unpacked_new_coords)
         return super().after_first_click_motion(*args, **kwargs)
+
+    def get_mean_cords_of_point(self, main_window, ob):
+        return (mean(main_window.canvas.coords(ob)[::2]),
+                mean(main_window.canvas.coords(ob)[1::2]))
 
     def double_click_in_canvas(self, main_window: 'MainWindow', event: tk.Event, *args, **kwargs):
         cords = event.x, event.y
