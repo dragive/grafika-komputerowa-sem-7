@@ -88,7 +88,7 @@ class PickTool(AbstractTool):
 
         main_window.items_to_be_deleted_at_changing_tools = self.center_point
 
-        self.rotation_point = main_window.canvas.create_oval(avg_x +10, avg_y -5,
+        self.rotation_point = main_window.canvas.create_oval(avg_x + 10, avg_y - 5,
                                                              avg_x + 20, avg_y + 5,
                                                              fill="green")
 
@@ -178,7 +178,7 @@ class PickTool(AbstractTool):
 
                     y2 = -y2
                     sin = np.divide(y2, np.sqrt(np.add(pow(x2, 2), pow(y2, 2))))
-                    cos = np.divide(x2,  np.sqrt(np.add(pow(x2, 2), pow(y2, 2))))
+                    cos = np.divide(x2, np.sqrt(np.add(pow(x2, 2), pow(y2, 2))))
 
                     def map_to_new_coords(p: tuple[Real, Real]):
                         x, y = p
@@ -203,6 +203,23 @@ class PickTool(AbstractTool):
 
                     unpacked_new_coords = [a for i in new_coords_of_checked_item for a in i]
                     main_window.canvas.coords(main_window.checked_item, *unpacked_new_coords)
+
+                    # rotation of box points
+                    if self.initial_other_box_point_coords is None:
+                        self.initial_other_box_point_coords = {
+                            o: (mean(main_window.canvas.coords(o)[::2]),
+                                mean(main_window.canvas.coords(o)[1::2]))
+                            for o in main_window.items_to_be_deleted_at_changing_tools
+                        }
+
+                    for item, coords in self.initial_other_box_point_coords.items():
+                        if item not in [self.rotation_point, self.center_point]:
+                            new_point_center_coords = map_to_new_coords(coords)
+
+                            main_window.canvas.coords(item,
+                                                      new_point_center_coords[0] + 5, new_point_center_coords[1] + 5,
+                                                      new_point_center_coords[0] - 5, new_point_center_coords[1] - 5)
+
         return super().after_first_click_motion(*args, **kwargs)
 
     def get_mean_cords_of_point(self, main_window, ob):
