@@ -134,8 +134,7 @@ class PickTool(AbstractTool):
                         self.initial_polygon_coords = main_window.canvas.coords(main_window.checked_item)
                         self.initial_box_point_coords = self.get_mean_cords_of_point(main_window, self._moved_object)
                         self.initial_other_box_point_coords = {
-                            o: (mean(main_window.canvas.coords(o)[::2]),
-                                mean(main_window.canvas.coords(o)[1::2]))
+                            o: self.get_mean_cords_of_point(main_window,o)
                             for o in main_window.items_to_be_deleted_at_changing_tools
                         }
                         pass
@@ -207,8 +206,7 @@ class PickTool(AbstractTool):
                     # rotation of box points
                     if self.initial_other_box_point_coords is None:
                         self.initial_other_box_point_coords = {
-                            o: (mean(main_window.canvas.coords(o)[::2]),
-                                mean(main_window.canvas.coords(o)[1::2]))
+                            o: self.get_mean_cords_of_point(main_window,o)
                             for o in main_window.items_to_be_deleted_at_changing_tools
                         }
 
@@ -221,10 +219,6 @@ class PickTool(AbstractTool):
                                                       new_point_center_coords[0] - 5, new_point_center_coords[1] - 5)
 
         return super().after_first_click_motion(*args, **kwargs)
-
-    def get_mean_cords_of_point(self, main_window, ob):
-        return (mean(main_window.canvas.coords(ob)[::2]),
-                mean(main_window.canvas.coords(ob)[1::2]))
 
     def double_click_in_canvas(self, main_window: 'MainWindow', event: tk.Event, *args, **kwargs):
         cords = event.x, event.y
@@ -254,7 +248,10 @@ class PickTool(AbstractTool):
             Buttons.RIGHT_BUTTON: None,
         })
 
-        self.initial_polygon_coords = None
-        self.initial_box_point_coords = None
+
+        self.initial_polygon_coords: None | Collection = None
+        self.initial_box_point_coords: None | Collection = None
+        self.initial_other_box_point_coords: None | Dict[int, Collection[int, ...]] = None
+
 
         return d

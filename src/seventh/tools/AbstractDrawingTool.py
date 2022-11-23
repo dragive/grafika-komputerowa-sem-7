@@ -28,6 +28,14 @@ class AbstractDrawingTool(AbstractTool):
                                                   fill="black",
                                                   **kwargs)
 
+        self.after_first_click_down_created_object()
+
+        return self.get_first_click_bindings(args, kwargs)
+
+    def after_first_click_down_created_object(self):
+        pass
+
+    def get_first_click_bindings(self, args, kwargs):
         return super().fist_click_in_canvas(*args, **kwargs)
 
     def after_first_click_motion(self, main_window: 'MainWindow', *args, **kwargs) -> Dict['Buttons', Callable]:
@@ -41,9 +49,16 @@ class AbstractDrawingTool(AbstractTool):
                                                   fill="black",
                                                   **kwargs)
 
+        return self.get_binding_after_first_click_motion(args, kwargs)
+
+    def get_binding_after_first_click_motion(self, args, kwargs):
         return super().after_first_click_motion(*args, **kwargs)
 
     def second_click_in_canvas(self, window: 'MainWindow', *args, **kwargs):
+        from src.seventh.tools.DrawingTool import DrawingTool
+        if self._drawn_object and not isinstance(self,DrawingTool):
+            print(self._drawn_object)
         self._drawn_object = None
         self._initial_cords = None
+
         return super().second_click_in_canvas(window, *args, **kwargs)

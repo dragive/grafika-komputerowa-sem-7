@@ -8,6 +8,7 @@ from typing import Callable, Union, Dict, Set
 
 from src.seventh.tools.AbstractTool import AbstractTool
 from src.seventh.tools.DeleteTool import DeleteTool
+from src.seventh.tools.DrawingTool import DrawingTool
 from src.seventh.tools.OvalTool import OvalTool
 from src.seventh.tools.PickTool import PickTool
 from src.seventh.tools.RectangleTool import RectangleTool
@@ -17,7 +18,7 @@ from src.seventh.utils import Buttons
 class Tools(enum.Enum):
     DELETE: type(AbstractTool) = DeleteTool
     PICK: type(AbstractTool) = PickTool
-    # LINE: type(AbstractTool) = LineTool
+    DRAWING: type(AbstractTool) = DrawingTool
     OVAL: type(AbstractTool) = OvalTool
     SQUARE: type(AbstractTool) = RectangleTool
 
@@ -31,6 +32,7 @@ class MainWindow:
         self.side_settings_button_square: Union[None, tk.Button] = None
         # self.side_settings_button_line: Union[None, tk.Button] = None
         self.side_settings_button_oval: Union[None, tk.Button] = None
+        self.side_settings_button_drawing: Union[None, tk.Button] = None
 
         self.__key_mappings: Dict[Buttons, set[Callable]] = {}
 
@@ -97,30 +99,40 @@ class MainWindow:
         return {
             Tools.PICK: self.side_settings_button_pick,
             Tools.OVAL: self.side_settings_button_oval,
+            Tools.DRAWING: self.side_settings_button_drawing,
             Tools.SQUARE: self.side_settings_button_square,
             Tools.DELETE: self.side_settings_button_delete,
         }
 
     def __set_tool_pick(self):
+        self.pre_set_tool()
         self.tool = Tools.PICK.value(main_window=self)
         self.__set_tool()
 
+    def __set_tool_drawing(self):
+        self.pre_set_tool()
+        self.tool = Tools.DRAWING.value(main_window=self)
+        self.__set_tool()
+
     def __set_tool_delete(self):
+        self.pre_set_tool()
         self.tool = Tools.DELETE.value(main_window=self)
         self.__set_tool()
 
     def __set_tool_oval(self):
+        self.pre_set_tool()
         self.tool = Tools.OVAL.value(main_window=self)
         self.__set_tool()
 
     def __set_tool_square(self):
+        self.pre_set_tool()
         self.tool = Tools.SQUARE.value(main_window=self)
         self.__set_tool()
 
-    #
-    # def __set_tool_line(self):
-    #     self.tool = Tools.LINE.value(main_window=self)
-    #     self.__set_tool()
+    def pre_set_tool(self):
+        if isinstance(self.tool, DrawingTool):
+            tool: DrawingTool = self.tool
+            tool.clear_drawn_points()
 
     def __submit_side_settings_text_field_params(self):
         abstract_tool: AbstractTool = self.tool
@@ -161,6 +173,10 @@ class MainWindow:
                                                      command=self.__set_tool_square)
         self.side_settings_button_square.pack(side=tk.LEFT)
 
+        self.side_settings_button_drawing = tk.Button(self.side_settings, text="Draw",
+                                                      command=self.__set_tool_drawing)
+        self.side_settings_button_drawing.pack(side=tk.LEFT)
+
         self.side_settings_text_field_params = tk.Entry(self.side_settings)
         self.side_settings_text_field_params.pack(side=tk.LEFT)
 
@@ -199,11 +215,13 @@ class MainWindow:
         if data is not None:
             try:
                 # print(data)
-                for i in data['data'].items():
-                    if i[1]['type'] == 'rectangle':
-                        self.canvas.create_rectangle(*i[1]['coords'], width=2)
-                    if i[1]['type'] == 'oval':
-                        self.canvas.create_oval(*i[1]['coords'], width=2)
+                for i in data['data'].values():
+                    if i['type'] == 'rectangle':
+                        self.canvas.create_rectangle(*i['coords'], width=2)
+                    if i['type'] == 'oval':
+                        self.canvas.create_oval(*i['coords'], width=2)
+                    if i['type'] == 'polygon':
+                        self.canvas.create_polygon(*i['coords'], width=2)
             except Exception:
                 messagebox.showerror("Error while parsing a file!")
 
@@ -238,6 +256,7 @@ class MainWindow:
         self.canvas.bind(Buttons.MOTION.value, self.return_handler(Buttons.MOTION), add=True)
         self.canvas.bind(Buttons.LEFT_BUTTON_RELEASE.value, self.return_handler(Buttons.LEFT_BUTTON_RELEASE), add=True)
         self.canvas.bind(Buttons.RIGHT_BUTTON_DOUBLE.value, self.return_handler(Buttons.RIGHT_BUTTON_DOUBLE), add=True)
+        self.canvas.bind(Buttons.RIGHT_BUTTON.value, self.return_handler(Buttons.RIGHT_BUTTON), add=True)
 
     def ___execute_in_set(self, button: Buttons, *args, **kwargs):
         # print(button)
@@ -245,6 +264,7 @@ class MainWindow:
         for i in self.__key_mappings[button]:
             x = i(self, *args, **kwargs, width=2)
             a.update(x)
+            pass
 
         self.bind_buttons(a)
 
@@ -272,7 +292,8 @@ class MainWindow:
                     identifier: {
                         "coords": self.canvas.coords(identifier),
                         "type": self.canvas.type(identifier)
-                    } for identifier in self.canvas.find_all()}
+                    } for identifier in self.canvas.find_all()
+                    if identifier not in self.items_to_be_deleted_at_changing_tools}
             }
             try:
                 dialog.write(dumps(data))

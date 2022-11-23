@@ -1,6 +1,8 @@
 import tkinter as tk
 from abc import abstractmethod
-from typing import Callable, Dict
+from numbers import Real
+from statistics import mean
+from typing import Callable, Dict, Tuple
 
 
 class AbstractTool:
@@ -45,3 +47,7 @@ class AbstractTool:
         return {
             Buttons.LEFT_BUTTON: self.fist_click_in_canvas,
         }
+
+    def get_mean_cords_of_point(self, main_window, ob)-> Tuple[Real,Real]:
+        return (mean(main_window.canvas.coords(ob)[::2]),
+                mean(main_window.canvas.coords(ob)[1::2]))
