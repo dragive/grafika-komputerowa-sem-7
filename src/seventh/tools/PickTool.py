@@ -171,8 +171,8 @@ class PickTool(AbstractTool):
                         self.initial_polygon_coords = main_window.canvas.coords(main_window.checked_item)
 
                     center_points_coords = self.get_mean_cords_of_point(main_window, self.center_point)
-
-                    x2, y2 = [a - b for a, b in zip(self.get_mean_cords_of_point(main_window, self.rotation_point),
+                    rotation_coords = self.get_mean_cords_of_point(main_window, self.rotation_point)
+                    x2, y2 = [a - b for a, b in zip(rotation_coords,
                                                     center_points_coords)]
 
                     y2 = -y2

@@ -6,6 +6,8 @@ from tkinter import filedialog
 from tkinter import messagebox
 from typing import Callable, Union, Dict, Set
 
+import numpy as np
+
 from src.seventh.tools.AbstractTool import AbstractTool
 from src.seventh.tools.DeleteTool import DeleteTool
 from src.seventh.tools.DrawingTool import DrawingTool
@@ -135,16 +137,83 @@ class MainWindow:
             tool.clear_drawn_points()
 
     def __submit_side_settings_text_field_params(self):
-        abstract_tool: AbstractTool = self.tool
-        if abstract_tool is not None:
-            values = self.side_settings_text_field_params.get().split(',')
-            try:
-                values = tuple(int(i) for i in values)
-            except ValueError as ex:
-                tk.messagebox.showerror("Value Error", "Only int values can be parsed!")
-                print(ex)
+        def create_polygon(points_raw):
+            points = tuple(float(x) for x in points_raw.split(','))
+            print(self.canvas.create_polygon(*points, fill="black"))
 
-            self.parsing_args_def(abstract_tool, values)
+        def move_polygon(id_and_translation_raw):
+            content = tuple(int(x) for x in id_and_translation_raw.split(','))
+            self.canvas.move(*content)
+
+        def rotate_polygon(id_reference_point_degrees):
+            id, x, y, degrees = tuple(int(x) for x in id_reference_point_degrees.split(','))
+
+            coords = self.canvas.coords(id)
+
+            sin = np.sin(((degrees + 360) % 360) / 360 * 2 * np.pi)
+            cos = np.cos(((degrees + 360) % 360) / 360 * 2 * np.pi)
+
+            def map_to_new_coords(x, y, ref_x, ref_y):
+                x -= ref_x
+                y -= ref_y
+
+                y *= -1
+                new_x, new_y = (x * cos - y * sin, x * sin + y * cos)
+
+                new_y *= -1
+
+                new_x += ref_x
+                new_y += ref_y
+
+                return round(new_x), round(new_y)
+
+            new_coords = tuple(
+                a for x_1, y_1 in zip(coords[::2], coords[1::2]) for a in map_to_new_coords(x_1, y_1, x, y))
+            self.canvas.coords(id, *new_coords)
+
+        def scale_polygon(id_reference_point_scale_x_y):
+            id, ref_x, ref_y, scale_x, scale_y = tuple(int(x) for x in id_reference_point_scale_x_y.split(','))
+
+            coords = self.canvas.coords(id)
+
+            xs = coords[::2]
+            ys = coords[1::2]
+
+            normalized_xs = tuple(_x - ref_x for _x in xs)
+            normalized_ys = tuple(_y - ref_y for _y in ys)
+
+            scaled_xs = tuple(_x * scale_x for _x in normalized_xs)
+            scaled_ys = tuple(_y * scale_y for _y in normalized_ys)
+
+            unnormalized_xs = tuple(_x + ref_x for _x in scaled_xs)
+            unnormalized_ys = tuple(_y + ref_y for _y in scaled_ys)
+
+            final_coords = tuple(a for _a in zip(unnormalized_xs, unnormalized_ys) for a in _a)
+
+            self.canvas.coords(id, *final_coords)
+
+        values = self.side_settings_text_field_params.get().split(' ')
+        match values[0]:
+            case 'c':
+                create_polygon(values[1])
+            case 'm':
+                move_polygon(values[1])
+            case 'r':
+                rotate_polygon(values[1])
+            case 's':
+                scale_polygon(values[1])
+            case 'c*':
+                for i in self.canvas.find_all():
+                    create_polygon(f'{i},{values[1]}')
+            case 'm*':
+                for i in self.canvas.find_all():
+                    move_polygon(f'{i},{values[1]}')
+            case 'r*':
+                for i in self.canvas.find_all():
+                    rotate_polygon(f'{i},{values[1]}')
+            case 's*':
+                for i in self.canvas.find_all():
+                    scale_polygon(f'{i},{values[1]}')
 
     def ___parsing_text_area_creating_object_4_args_from_tools_impl(self, abstract_tool, values):
         if len(values) == 4:
