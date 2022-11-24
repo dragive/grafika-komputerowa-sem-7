@@ -55,12 +55,12 @@ class MainWindow:
 
     def __set_tool(self):
         # log(self.tool)
-        if isinstance(self.tool, Tools.PICK.value):
-            self.disable_button(self.side_settings_text_field_button_submit)
-            self.__set_impl_none()
-        else:
-            self.enable_button(self.side_settings_text_field_button_submit)
-            self.__set_impl_4_args_creating_object()
+        # if isinstance(self.tool, Tools.PICK.value):
+        #     self.disable_button(self.side_settings_text_field_button_submit)
+        #     self.__set_impl_none()
+        # else:
+        #     self.enable_button(self.side_settings_text_field_button_submit)
+        #     self.__set_impl_4_args_creating_object()
 
         for k, v in self.__get_buttons_dict.items():
             if not isinstance(self.tool, k.value):
