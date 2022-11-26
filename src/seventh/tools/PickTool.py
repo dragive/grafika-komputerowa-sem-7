@@ -134,7 +134,7 @@ class PickTool(AbstractTool):
                         self.initial_polygon_coords = main_window.canvas.coords(main_window.checked_item)
                         self.initial_box_point_coords = self.get_mean_cords_of_point(main_window, self._moved_object)
                         self.initial_other_box_point_coords = {
-                            o: self.get_mean_cords_of_point(main_window,o)
+                            o: self.get_mean_cords_of_point(main_window, o)
                             for o in main_window.items_to_be_deleted_at_changing_tools
                         }
                         pass
@@ -206,7 +206,7 @@ class PickTool(AbstractTool):
                     # rotation of box points
                     if self.initial_other_box_point_coords is None:
                         self.initial_other_box_point_coords = {
-                            o: self.get_mean_cords_of_point(main_window,o)
+                            o: self.get_mean_cords_of_point(main_window, o)
                             for o in main_window.items_to_be_deleted_at_changing_tools
                         }
 
@@ -248,10 +248,8 @@ class PickTool(AbstractTool):
             Buttons.RIGHT_BUTTON: None,
         })
 
-
         self.initial_polygon_coords: None | Collection = None
         self.initial_box_point_coords: None | Collection = None
         self.initial_other_box_point_coords: None | Dict[int, Collection[int, ...]] = None
-
 
         return d
