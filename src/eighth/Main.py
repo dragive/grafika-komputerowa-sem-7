@@ -365,7 +365,6 @@ class SquareTransform:
                 coords = (_x - (self.R), _y - (self.R))
 
                 if new_pixel is not None:
-                    assert coords[0] >= 0 and coords[1] >= 0
                     new_pixel = self.transform(new_pixel)
 
                     if new_pixel.ndim > 0:
