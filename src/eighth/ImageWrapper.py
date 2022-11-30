@@ -13,7 +13,7 @@ class ImageWrapper:
     def get_rows(self):
         data = list(self.img.getdata())
         new_data = []
-        for row_no in range(self.img.height - 1):
+        for row_no in range(self.img.height):
             new_data.append(data[row_no * self.img.width:(row_no + 1) * self.img.width])
 
         return new_data
