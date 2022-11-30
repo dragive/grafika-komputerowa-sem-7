@@ -372,11 +372,7 @@ class SquareTransform:
                         new_pixel = tuple(new_pixel)
                     else:
                         new_pixel = (new_pixel,) * 3
-                    # if 252 in coords:
-                    #     pass
                     new_image.putpixel(coords, new_pixel)
-                # else:
-                #     new_image.putpixel(coords, 0 if data.ndim == 2 else (0, 0, 0))
 
         return new_image
 
