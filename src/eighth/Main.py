@@ -350,28 +350,36 @@ class SquareTransform:
 
     def apply(self, img: PIL.Image.Image):
         data = ImageWrapper(img).get_access_matrix
-        X = len(data[0])
-        new_image = PIL.Image.new("RGB", (data.shape[0], data.shape[1]))
-        # new_img_data = [[0,0,0]]*(len(data)*len(data[0]))
+        new_image = PIL.Image.new("RGB", (data.shape[0] - (self.R * 2 + 1), data.shape[1] - (self.R * 2 + 1)))
+
+        data_len = len(data)
+        data__len = len(data[0])
+
         for _y, y in enumerate(data):
+            if _y < self.R or _y >= data_len - self.R - 1:
+                continue
             for _x, x in enumerate(y):
+                if _x < self.R or _x >= data__len - self.R - 1:
+                    continue
                 new_pixel = self.get_matrix_of_pixel(data, x=_x, y=_y, r=self.R)
+                coords = (_x - (self.R), _y - (self.R))
+
                 if new_pixel is not None:
+                    if sum(coords) == 0:
+                        print("x")
+                    assert coords[0] >= 0 and coords[1] >= 0
                     new_pixel = self.transform(new_pixel)
+
                     if new_pixel.ndim > 0:
                         new_pixel = tuple(new_pixel)
                     else:
                         new_pixel = (new_pixel,) * 3
-                    # new_img_data[X*(int(_y)-self.R)+(int(_x)-self.R)] = new_pixel
-                    new_image.putpixel((_x,_y),new_pixel)
+                    # if 252 in coords:
+                    #     pass
+                    new_image.putpixel(coords, new_pixel)
                 # else:
-                #     print(end="x")
-                else:
-                    new_image.putpixel((_x, _y), 0 if data.ndim == 2 else (0, 0, 0))
-        #
-        # new_image.putdata(data= new_img_data)
+                #     new_image.putpixel(coords, 0 if data.ndim == 2 else (0, 0, 0))
 
-        new_image.show()
         return new_image
 
 
