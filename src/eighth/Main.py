@@ -6,10 +6,9 @@ from typing import Tuple, Any, Callable
 
 import PIL.ImageTk
 import numpy as np
-from PIL import ImageTk
+from PIL import ImageTk, ImageOps
 from PIL.Image import Image, NEAREST
 
-from src.eighth.ImageWrapper import ImageWrapper
 from src.fourth.formats.JPEGParser import JPEGParser
 
 WIDTH_OF_BUTTONS = 50
@@ -103,7 +102,7 @@ class MainWindow(tk.Tk):
 
     def __lunch_on_top_morphology(self):
         self.top_level_morphology = MorphologySettingsTopLevel(self)
-        GrayScalePointTransformation().apply(self, self.image_from_pixels, "1")
+        self.image_from_pixels = ImageOps.grayscale(self.image_from_pixels)
         self.redraw(self.image_from_pixels)
 
     def __scale(self):
@@ -333,15 +332,12 @@ class SquareTransform:
 
         if x - r < 0 or y - r < 0 or x + r > X or y + r > Y:
             return None
-        ret = np.array(tuple(
-            data[max(0, min(_y + y, Y - 1))][max(0, min(_x + x, X - 1))]
+
+        ret = self.transform(np.fromiter(
+(            data[max(0, min(_y + y, Y - 1))][max(0, min(_x + x, X - 1))]
             for _y in range(-r, r + 1)
-            for _x in range(-r, r + 1)
-        ))
-
-        if ret.ndim:
-            ret = list(ret)
-
+            for _x in range(-r, r + 1)),dtype=np.uint8)
+        )
         return ret
 
     @abstractmethod
@@ -349,11 +345,15 @@ class SquareTransform:
         pass
 
     def apply(self, img: PIL.Image.Image):
-        data = ImageWrapper(img).get_access_matrix
-        new_image = PIL.Image.new("RGB", (data.shape[0] - (self.R * 2 + 1), data.shape[1] - (self.R * 2 + 1)))
+        data = np.asarray(img)
 
         data_len = len(data)
         data__len = len(data[0])
+
+        new_img_data = np.array([
+            [0 for _ in range((data.shape[1] - (self.R * 2 + 1)))] for _ in
+            range((data.shape[0] - (self.R * 2 + 1)))
+        ], dtype=np.uint8)
 
         for _y, y in enumerate(data):
             if _y < self.R or _y >= data_len - self.R - 1:
@@ -362,31 +362,25 @@ class SquareTransform:
                 if _x < self.R or _x >= data__len - self.R - 1:
                     continue
                 new_pixel = self.get_matrix_of_pixel(data, x=_x, y=_y, r=self.R)
-                coords = (_x - (self.R), _y - (self.R))
+                coords = (_x - self.R, _y - self.R)
 
                 if new_pixel is not None:
-                    new_pixel = self.transform(new_pixel)
 
-                    if new_pixel.ndim > 0:
-                        new_pixel = tuple(new_pixel)
-                    else:
-                        new_pixel = (new_pixel,) * 3
-                    new_image.putpixel(coords, new_pixel)
+                    new_img_data[coords[1]][coords[0]] = new_pixel
 
-        return new_image
+        return PIL.Image.fromarray(new_img_data,mode="L")
 
 
 class Erosion(SquareTransform):
 
     def transform(self, matrix: np.ndarray):
-        # return np.array([0,0,0])
-        return np.min(matrix, axis=(0, 1))
+        return np.min(matrix, )
 
 
 class Dilatation(SquareTransform):
 
     def transform(self, matrix: np.ndarray):
-        return np.max(matrix, axis=(0, 1))
+        return np.max(matrix,)
 
 
 class Opening(SquareTransform):
@@ -443,48 +437,14 @@ class MorphologySettingsTopLevel(tk.Toplevel):
             )
         )
 
-    # def get_command_filter_transformation(self, name_of_tool: type(ThreeXThreeTransformation)) -> Callable[[Any], Any]:
-    #     return lambda *args, **kwargs: (
-    #         name_of_tool()
-    #         .apply(self.master, self.master.image_from_pixels),
-    #         self.master.redraw(self.master.image_from_pixels)
-    #     )
-
-
-class PointTransformation:
-    @abstractmethod
-    def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> tuple[int, int, int]:
-        pass
-
-    def apply(self, master, image: PIL.Image.Image, raw_value: str):
-        try:
-            value: tuple[float, float, float] | tuple[float] | Any = raw_value.split(',')
-            value = tuple(float(x) for x in value)
-            assert len(value) in (1, 3)
-        except Exception as ex:
-            raise ex
-        if len(value) == 1:
-            value *= 3
-        loaded = image.load()
-        for x in range(image.width):
-            for y in range(image.height):
-                loaded[x, y] = self.transform_pixel(loaded[x, y], value)
-
-
-class GrayScaleAbstractPointTransformation(PointTransformation, abc.ABC):
-    def apply_gray_scale_transform(self, diff, pixel, value):
-        return tuple(
-            int(pixel_v - (max(min(correct_v, 1.0), 0) * (pixel_v - diff)))
-            for correct_v, pixel_v in zip(value, pixel))
-
-
-class GrayScalePointTransformation(GrayScaleAbstractPointTransformation):
-    def transform_pixel(self, pixel: tuple[int, int, int], value: tuple[float, float, float]) -> Tuple[int, ...]:
-        diff = sum(pixel) // 3
-        ret: Tuple[int, ...] = self.apply_gray_scale_transform(diff, pixel, value)
-
-        return ret
-
 
 if __name__ == '__main__':
+    # MainWindow.run()
+    import cProfile, pstats
+
+    profiler = cProfile.Profile()
+    profiler.enable()
     MainWindow.run()
+    profiler.disable()
+    stats = pstats.Stats(profiler).sort_stats('cumtime')
+    stats.print_stats()
